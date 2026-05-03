@@ -68,7 +68,7 @@ DEVOPS_PATTERNS: list[PatternSpec] = [
     {"pattern": r"ENV.*(URL|HOST|ENDPOINT)", "category": "devops", "stack": "devops"},
     {"pattern": r"curl\s", "category": "devops", "stack": "devops"},
     {"pattern": r"wget\s", "category": "devops", "stack": "devops"},
-    {"pattern": r"ingress:", "category": "devops", "stack": "devops"},
+    {"pattern": r"\bingress:", "category": "devops", "stack": "devops"},
     {"pattern": r"LoadBalancer", "category": "devops", "stack": "devops"},
 ]
 
