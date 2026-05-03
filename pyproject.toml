@@ -46,5 +46,9 @@ disallow_untyped_decorators = false
 module = "pytest"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "tests.fixtures.*"
+ignore_errors = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

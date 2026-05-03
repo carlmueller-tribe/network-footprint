@@ -14,3 +14,4 @@ repos:
           - types-pyyaml
           - click
         args: [--strict]
+        exclude: ^tests/fixtures/
