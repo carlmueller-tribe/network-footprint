@@ -1,10 +1,12 @@
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class PatternSpec(TypedDict):
     pattern: str
     category: str
     stack: str
+    source: NotRequired[str]  # "default" | "dependency_resolved" | "custom"
+    transitive: NotRequired[bool]
 
 
 NODE_PATTERNS: list[PatternSpec] = [

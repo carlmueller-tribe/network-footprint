@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from footprint.patterns import PatternSpec
+
 
 @dataclass
 class ParsedDep:
@@ -362,3 +364,43 @@ def resolve_packages(
                 )
 
     return results
+
+
+def _make_pattern(
+    pat: str,
+    cat: str,
+    stack: str,
+    transitive: bool,
+) -> PatternSpec:
+    spec: PatternSpec = {
+        "pattern": pat,
+        "category": cat,
+        "stack": stack,
+        "source": "dependency_resolved",
+    }
+    if transitive:
+        spec["transitive"] = True
+    return spec
+
+
+def generate_patterns(
+    resolved: list[ResolvedPackage],
+    ecosystem: str,
+) -> list[PatternSpec]:
+    """Generate regex patterns from network-capable resolved packages."""
+    patterns: list[PatternSpec] = []
+    for pkg in resolved:
+        if not pkg.network_capable:
+            continue
+        escaped = re.escape(pkg.import_name)
+        cat = pkg.category or "network_call"
+        stack = ecosystem if ecosystem in ("node", "python", "devops") else "node"
+        if ecosystem == "python":
+            patterns.append(_make_pattern(f"import {escaped}", cat, stack, pkg.transitive))
+            patterns.append(_make_pattern(f"from {escaped}", cat, stack, pkg.transitive))
+        else:  # node
+            patterns.append(_make_pattern(f"from ['\"]{escaped}['\"]", cat, stack, pkg.transitive))
+            patterns.append(
+                _make_pattern(rf"require\(['\"]{escaped}['\"]", cat, stack, pkg.transitive)
+            )
+    return patterns
