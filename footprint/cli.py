@@ -6,7 +6,7 @@ import click
 
 from footprint.manifest import load_manifest
 from footprint.patterns import PatternSpec
-from footprint.report import format_flat, format_json
+from footprint.report import format_flat, format_json, format_markdown
 from footprint.resolver import generate_patterns, parse_all, resolve_packages
 from footprint.scanner import Scanner
 
@@ -18,7 +18,7 @@ def main() -> None:
 
 @main.command()
 @click.argument("repo_path", default=".", type=click.Path(exists=True))
-@click.option("--output", default="json", type=click.Choice(["json", "flat"]))
+@click.option("--output", default="json", type=click.Choice(["json", "flat", "markdown"]))
 @click.option("--manifest", "manifest_path", default=None, type=click.Path(exists=True))
 @click.option(
     "--no-resolve",
@@ -62,6 +62,8 @@ def scan(
 
     if output == "json":
         click.echo(format_json(results))
+    elif output == "markdown":
+        click.echo(format_markdown(results, repo_root=str(root)))
     else:
         flat = format_flat(results)
         if flat:

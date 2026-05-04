@@ -31,6 +31,7 @@ class Match:
     line: int
     source: str = "default"
     transitive: bool = False
+    line_content: str = ""
 
 
 @dataclass
@@ -136,6 +137,7 @@ class Scanner:
                                 line=lineno,
                                 source=str(p.get("source", "default")),
                                 transitive=bool(p.get("transitive", False)),
+                                line_content=line,
                             )
                         )
         return matches
