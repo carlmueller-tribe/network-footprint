@@ -84,13 +84,13 @@ def test_unknown_packages_and_known_mixed() -> None:
     assert any(r.package == "stripe" and r.source == "claude" for r in results)
 
 
-def test_claude_failure_treated_as_non_network() -> None:
+def test_claude_failure_treated_as_unknown_package() -> None:
     deps = [ParsedDep(name="unknown-pkg", ecosystem="node")]
     with patch("footprint.resolver._classify_with_claude", side_effect=RuntimeError("no auth")):
         results = resolve_packages(deps)
     r = next(r for r in results if r.package == "unknown-pkg")
-    assert r.network_capable is False
-    assert r.source == "claude_failed"
+    assert r.network_capable is True
+    assert r.source == "unknown_package"
 
 
 def test_transitive_flag_preserved() -> None:

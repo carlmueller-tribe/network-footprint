@@ -150,7 +150,7 @@ class ResolvedPackage:
     import_name: str
     network_capable: bool
     category: str | None
-    source: str  # "lookup" | "claude" | "manifest_override" | "claude_failed"
+    source: str  # "lookup" | "claude" | "manifest_override" | "unknown_package"
     transitive: bool = False
 
 
@@ -444,9 +444,9 @@ def resolve_packages(
                     ResolvedPackage(
                         package=dep.name,
                         import_name=dep.name,
-                        network_capable=False,
-                        category=None,
-                        source="claude_failed",
+                        network_capable=True,  # conservative: assume capable, let human verify
+                        category="network_call",
+                        source="unknown_package",
                         transitive=dep.transitive,
                     )
                 )
@@ -459,12 +459,13 @@ def _make_pattern(
     cat: str,
     stack: str,
     transitive: bool,
+    source: str = "dependency_resolved",
 ) -> PatternSpec:
     spec: PatternSpec = {
         "pattern": pat,
         "category": cat,
         "stack": stack,
-        "source": "dependency_resolved",
+        "source": source,
     }
     if transitive:
         spec["transitive"] = True
@@ -483,12 +484,23 @@ def generate_patterns(
         escaped = re.escape(pkg.import_name)
         cat = pkg.category or "network_call"
         stack = ecosystem if ecosystem in ("node", "python", "devops") else "node"
+        base_source = (
+            "dependency_resolved" if pkg.source != "unknown_package" else "unknown_package"
+        )
         if ecosystem == "python":
-            patterns.append(_make_pattern(f"import {escaped}", cat, stack, pkg.transitive))
-            patterns.append(_make_pattern(f"from {escaped}", cat, stack, pkg.transitive))
-        else:  # node
-            patterns.append(_make_pattern(f"from ['\"]{escaped}['\"]", cat, stack, pkg.transitive))
             patterns.append(
-                _make_pattern(rf"require\(['\"]{escaped}['\"]", cat, stack, pkg.transitive)
+                _make_pattern(f"import {escaped}", cat, stack, pkg.transitive, base_source)
+            )
+            patterns.append(
+                _make_pattern(f"from {escaped}", cat, stack, pkg.transitive, base_source)
+            )
+        else:  # node
+            patterns.append(
+                _make_pattern(f"from ['\"]{escaped}['\"]", cat, stack, pkg.transitive, base_source)
+            )
+            patterns.append(
+                _make_pattern(
+                    rf"require\(['\"]{escaped}['\"]", cat, stack, pkg.transitive, base_source
+                )
             )
     return patterns

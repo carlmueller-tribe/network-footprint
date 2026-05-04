@@ -85,6 +85,8 @@ class Scanner:
                 score += 0.2
             if m.source == "dependency_resolved":
                 score += 0.1
+            if m.source == "unknown_package":
+                score -= 0.3
             # bonus for additional matches in same file, capped at +0.3
             score += min(i, 3) * 0.1
             m.confidence = max(0.0, min(1.0, score))
