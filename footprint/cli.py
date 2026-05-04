@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from footprint.coverage import analyze_coverage
 from footprint.manifest import load_manifest
 from footprint.patterns import PatternSpec
 from footprint.report import format_flat, format_json, format_markdown
@@ -109,6 +110,8 @@ def scan(
         results = [r for r in results if r.matches]
         for r in results:
             r.categories = sorted({m.category for m in r.matches})
+
+    analyze_coverage(results)
 
     if output == "json":
         click.echo(format_json(results, repo=str(root)))

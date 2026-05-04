@@ -44,13 +44,14 @@ def format_json(results: list[ScanResult], repo: str = "") -> str:
             if m.transitive:
                 entry["transitive"] = True
             matches.append(entry)
-        results_data.append(
-            {
-                "file": r.file,
-                "categories": r.categories,
-                "matches": matches,
-            }
-        )
+        result_entry: dict[str, object] = {
+            "file": r.file,
+            "categories": r.categories,
+            "matches": matches,
+        }
+        if r.coverage:
+            result_entry["coverage"] = r.coverage
+        results_data.append(result_entry)
 
     summary: dict[str, object] = {
         "repo": repo,
@@ -118,6 +119,12 @@ def format_markdown(results: list[ScanResult], repo_root: str = "") -> str:
         for result, matches in cat_results:
             lines.append(f"### `{result.file}`")
             lines.append("")
+            if result.coverage == "likely_active":
+                lines.append("**Coverage:** ✓ appears in test calls")
+                lines.append("")
+            elif result.coverage == "no_test_coverage":
+                lines.append("**Coverage:** ⚠ no test coverage found")
+                lines.append("")
             lines.append("| Line | Confidence | Snippet |")
             lines.append("|------|------------|---------|")
             for m in matches:

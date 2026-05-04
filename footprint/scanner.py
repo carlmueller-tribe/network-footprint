@@ -44,6 +44,7 @@ class ScanResult:
     file: str
     categories: list[str]
     matches: list[Match]
+    coverage: str = ""  # "likely_active" | "no_test_coverage" | ""
 
 
 class Scanner:
