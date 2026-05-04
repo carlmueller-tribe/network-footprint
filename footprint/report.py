@@ -85,7 +85,11 @@ def format_markdown(results: list[ScanResult], repo_root: str = "") -> str:
     lines.append("")
 
     lines.append(
-        "**Confidence:** `0.9–1.0` high signal · `0.7–0.8` likely · `0.5–0.6` low signal · `< 0.5` probable false positive"  # noqa: E501
+        "> **Confidence** — likelihood the match is a real network call or route, "
+        "not noise (comment, string literal, test artifact, or unverified dependency).  "
+    )
+    lines.append(
+        "> `0.9–1.0` certain · `0.7–0.8` likely · `0.5–0.6` uncertain · `< 0.5` probable noise"
     )
     lines.append("")
 
