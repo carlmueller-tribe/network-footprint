@@ -930,20 +930,19 @@ Packages to classify:
 """
 
 
+_BATCH_SIZE = 25
+_BATCH_TIMEOUT = 30  # seconds per batch — 25 packages should complete well within this
+
+
 def _classify_with_claude(packages: list[str]) -> str:
-    """Call Claude for package classification. Tries claude CLI subprocess first, SDK fallback."""
-    preview = ", ".join(packages[:5]) + ("..." if len(packages) > 5 else "")
-    print(
-        f"[footprint] asking Claude to classify {len(packages)} unknown package(s): {preview}",
-        file=sys.stderr,
-    )
+    """Classify one batch of packages via Claude CLI or SDK."""
     prompt = _CLASSIFIER_PROMPT.format(packages="\n".join(packages))
     if shutil.which("claude"):
         result = subprocess.run(
             ["claude", "-p", prompt],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=_BATCH_TIMEOUT,
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -955,6 +954,28 @@ def _classify_with_claude(packages: list[str]) -> str:
         "No Claude authentication available. "
         "Install Claude Code (claude.ai/code) or set ANTHROPIC_API_KEY."
     )
+
+
+def _classify_packages(packages: list[str]) -> dict[str, dict[str, Any]]:
+    """Classify packages in batches, merging results. Returns map of package -> classification."""
+    total = len(packages)
+    batches = [packages[i : i + _BATCH_SIZE] for i in range(0, total, _BATCH_SIZE)]
+    preview = ", ".join(packages[:5]) + ("..." if total > 5 else "")
+    n_batches = len(batches)
+    batch_info = f" ({n_batches} batch{'es' if n_batches > 1 else ''})" if n_batches > 1 else ""
+    print(
+        f"[footprint] asking Claude to classify {total} unknown package(s){batch_info}: {preview}",
+        file=sys.stderr,
+    )
+    classified_map: dict[str, dict[str, Any]] = {}
+    for i, batch in enumerate(batches, 1):
+        if len(batches) > 1:
+            print(f"[footprint]   batch {i}/{len(batches)}: {', '.join(batch)}", file=sys.stderr)
+        raw = _classify_with_claude(batch)
+        for item in _parse_claude_response(raw):
+            if isinstance(item, dict) and "package" in item:
+                classified_map[item["package"]] = item
+    return classified_map
 
 
 def _classify_with_sdk(packages: list[str]) -> str:
@@ -1041,11 +1062,9 @@ def resolve_packages(
 
     if direct_unknown:
         try:
-            raw = _classify_with_claude([d.name for d in direct_unknown])
-            classified = _parse_claude_response(raw)
-            classified_map: dict[str, dict[str, Any]] = {
-                item["package"]: item for item in classified if isinstance(item, dict)
-            }
+            classified_map: dict[str, dict[str, Any]] = _classify_packages(
+                [d.name for d in direct_unknown]
+            )
         except Exception as exc:
             warnings.warn(
                 f"Claude classifier failed: {exc}. Treating unknown packages as non-network.",
