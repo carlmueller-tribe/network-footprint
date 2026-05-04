@@ -897,7 +897,120 @@ KNOWN_PACKAGES: dict[str, dict[str, Any]] = {
     "vitest": {"network_capable": False, "import_name": "vitest", "category": None},
     "eslint": {"network_capable": False, "import_name": "eslint", "category": None},
     "prettier": {"network_capable": False, "import_name": "prettier", "category": None},
+    # Node — common utilities / middleware (not network-capable)
+    "dotenv": {"network_capable": False, "import_name": "dotenv", "category": None},
+    "express-session": {
+        "network_capable": False,
+        "import_name": "express-session",
+        "category": None,
+    },  # noqa: E501
+    "express-rate-limit": {
+        "network_capable": False,
+        "import_name": "express-rate-limit",
+        "category": None,
+    },  # noqa: E501
+    "cookie-parser": {"network_capable": False, "import_name": "cookie-parser", "category": None},
+    "cors": {"network_capable": False, "import_name": "cors", "category": None},
+    "helmet": {"network_capable": False, "import_name": "helmet", "category": None},
+    "morgan": {"network_capable": False, "import_name": "morgan", "category": None},
+    "compression": {"network_capable": False, "import_name": "compression", "category": None},
+    "bcrypt": {"network_capable": False, "import_name": "bcrypt", "category": None},
+    "bcryptjs": {"network_capable": False, "import_name": "bcryptjs", "category": None},
+    "jsonwebtoken": {"network_capable": False, "import_name": "jsonwebtoken", "category": None},
+    "passport": {"network_capable": False, "import_name": "passport", "category": None},
+    "multer": {"network_capable": False, "import_name": "multer", "category": None},
+    "@tanstack/react-query-devtools": {  # devtools UI only, no network
+        "network_capable": False,
+        "import_name": "@tanstack/react-query-devtools",
+        "category": None,
+    },
+    # Node — database clients (network_call — open TCP connections)
+    "pg": {"network_capable": True, "import_name": "pg", "category": "network_call"},
+    "mysql2": {"network_capable": True, "import_name": "mysql2", "category": "network_call"},
+    "mysql": {"network_capable": True, "import_name": "mysql", "category": "network_call"},
+    "mongoose": {"network_capable": True, "import_name": "mongoose", "category": "network_call"},
+    "sequelize": {"network_capable": True, "import_name": "sequelize", "category": "network_call"},
+    "typeorm": {"network_capable": True, "import_name": "typeorm", "category": "network_call"},
+    "prisma": {
+        "network_capable": True,
+        "import_name": "@prisma/client",
+        "category": "network_call",
+    },  # noqa: E501
+    "@prisma/client": {
+        "network_capable": True,
+        "import_name": "@prisma/client",
+        "category": "network_call",
+    },  # noqa: E501
+    "connect-pg-simple": {
+        "network_capable": True,
+        "import_name": "connect-pg-simple",
+        "category": "network_call",
+    },  # noqa: E501
+    "drizzle-orm": {
+        "network_capable": True,
+        "import_name": "drizzle-orm",
+        "category": "network_call",
+    },  # noqa: E501
+    # Python — database / key-value clients
+    "psycopg2": {"network_capable": True, "import_name": "psycopg2", "category": "network_call"},
+    "psycopg2-binary": {
+        "network_capable": True,
+        "import_name": "psycopg2",
+        "category": "network_call",
+    },  # noqa: E501
+    "psycopg": {"network_capable": True, "import_name": "psycopg", "category": "network_call"},
+    "asyncpg": {"network_capable": True, "import_name": "asyncpg", "category": "network_call"},
+    "aiomysql": {"network_capable": True, "import_name": "aiomysql", "category": "network_call"},
+    "databases": {"network_capable": True, "import_name": "databases", "category": "network_call"},
+    "valkey": {"network_capable": True, "import_name": "valkey", "category": "network_call"},
+    "py-key-value-aio": {
+        "network_capable": True,
+        "import_name": "key_value_aio",
+        "category": "network_call",
+    },  # noqa: E501
+    # Python — not network
+    "jsonschema": {"network_capable": False, "import_name": "jsonschema", "category": None},
+    "watchfiles": {"network_capable": False, "import_name": "watchfiles", "category": None},
+    "python-multipart": {"network_capable": False, "import_name": "multipart", "category": None},
+    "python-slugify": {"network_capable": False, "import_name": "slugify", "category": None},
+    "python-dateutil": {"network_capable": False, "import_name": "dateutil", "category": None},
+    "arrow": {"network_capable": False, "import_name": "arrow", "category": None},
+    "marshmallow": {"network_capable": False, "import_name": "marshmallow", "category": None},
+    "attrs": {"network_capable": False, "import_name": "attr", "category": None},
+    "cattrs": {"network_capable": False, "import_name": "cattr", "category": None},
+    "msgspec": {"network_capable": False, "import_name": "msgspec", "category": None},
 }
+
+# Prefix-based families — any package matching these prefixes is classified without Claude.
+# import_name is derived by replacing hyphens with dots in the package name.
+_KNOWN_PREFIXES: list[tuple[str, bool, str | None]] = [
+    # (prefix, network_capable, category)
+    ("opentelemetry-instrumentation-", True, "telemetry"),
+    ("opentelemetry-exporter-", True, "telemetry"),
+    ("opentelemetry-semantic-conventions", True, "telemetry"),
+    ("opentelemetry-contrib-", True, "telemetry"),
+    ("@opentelemetry/instrumentation-", True, "telemetry"),
+    ("@opentelemetry/exporter-", True, "telemetry"),
+    ("@sentry/", True, "telemetry"),
+    ("@aws-sdk/client-", True, "network_call"),
+    ("@aws-sdk/lib-", True, "network_call"),
+    ("langchain-", True, "network_call"),
+]
+
+
+def _lookup_prefix(name: str) -> dict[str, Any] | None:
+    """Return a KNOWN_PACKAGES-style entry if name matches a known prefix, else None."""
+    lower = name.lower()
+    for prefix, network_capable, category in _KNOWN_PREFIXES:
+        if lower.startswith(prefix):
+            import_name = name.replace("-", ".").replace("/", ".")
+            return {
+                "network_capable": network_capable,
+                "import_name": import_name,
+                "category": category,
+            }
+    return None
+
 
 _CLASSIFIER_PROMPT = """\
 You are a code analysis assistant. Given a list of package names, classify each one.
@@ -938,6 +1051,7 @@ def _classify_with_claude(packages: list[str]) -> str:
     """Classify one batch of packages via Claude CLI or SDK."""
     prompt = _CLASSIFIER_PROMPT.format(packages="\n".join(packages))
     if shutil.which("claude"):
+        print("[footprint]   → calling Claude CLI...", file=sys.stderr)
         result = subprocess.run(
             ["claude", "-p", prompt],
             capture_output=True,
@@ -949,6 +1063,7 @@ def _classify_with_claude(packages: list[str]) -> str:
         raise RuntimeError(f"claude CLI failed: {result.stderr.strip()}")
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if api_key:
+        print("[footprint]   → calling Claude SDK...", file=sys.stderr)
         return _classify_with_sdk(packages)
     raise RuntimeError(
         "No Claude authentication available. "
@@ -969,12 +1084,16 @@ def _classify_packages(packages: list[str]) -> dict[str, dict[str, Any]]:
     )
     classified_map: dict[str, dict[str, Any]] = {}
     for i, batch in enumerate(batches, 1):
-        if len(batches) > 1:
-            print(f"[footprint]   batch {i}/{len(batches)}: {', '.join(batch)}", file=sys.stderr)
+        if n_batches > 1:
+            print(f"[footprint]   batch {i}/{n_batches}: {', '.join(batch)}", file=sys.stderr)
         raw = _classify_with_claude(batch)
         for item in _parse_claude_response(raw):
             if isinstance(item, dict) and "package" in item:
                 classified_map[item["package"]] = item
+                tag = item.get("category") or (
+                    "network_call" if item.get("network_capable") else "not network-capable"
+                )  # noqa: E501
+                print(f"[footprint]   {item['package']} → {tag}", file=sys.stderr)
     return classified_map
 
 
@@ -1048,6 +1167,17 @@ def resolve_packages(
                     import_name=str(entry["import_name"]),
                     network_capable=bool(entry["network_capable"]),
                     category=entry.get("category"),
+                    source="lookup",
+                    transitive=dep.transitive,
+                )
+            )
+        elif (prefix_entry := _lookup_prefix(dep.name)) is not None:
+            results.append(
+                ResolvedPackage(
+                    package=dep.name,
+                    import_name=str(prefix_entry["import_name"]),
+                    network_capable=bool(prefix_entry["network_capable"]),
+                    category=prefix_entry.get("category"),
                     source="lookup",
                     transitive=dep.transitive,
                 )
