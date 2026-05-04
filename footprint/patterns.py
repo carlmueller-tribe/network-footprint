@@ -59,14 +59,14 @@ PYTHON_PATTERNS: list[PatternSpec] = [
         "category": "route_definition",
         "stack": "python",
     },
-    {"pattern": r"\bpath\(", "category": "route_definition", "stack": "python"},
     {"pattern": r"\bre_path\(", "category": "route_definition", "stack": "python"},
-    {"pattern": r"\burl\(", "category": "route_definition", "stack": "python"},
 ]
 
 DEVOPS_PATTERNS: list[PatternSpec] = [
     {"pattern": r"EXPOSE\s+\d+", "category": "devops", "stack": "devops"},
-    {"pattern": r"^\s*ports:", "category": "devops", "stack": "devops"},
+    # Narrowed: top-level "ports:" matches CI configs. Only indented ports: under a
+    # service block (Docker Compose style) is a networking signal.
+    {"pattern": r"^\s+ports:", "category": "devops", "stack": "devops"},
     {"pattern": r"ENV.*(URL|HOST|ENDPOINT)", "category": "devops", "stack": "devops"},
     {"pattern": r"curl\s", "category": "devops", "stack": "devops"},
     {"pattern": r"wget\s", "category": "devops", "stack": "devops"},
