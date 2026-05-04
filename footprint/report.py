@@ -84,6 +84,11 @@ def format_markdown(results: list[ScanResult], repo_root: str = "") -> str:
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")  # noqa: UP017
     lines.append("")
 
+    lines.append(
+        "**Confidence:** `0.9–1.0` high signal · `0.7–0.8` likely · `0.5–0.6` low signal · `< 0.5` probable false positive"  # noqa: E501
+    )
+    lines.append("")
+
     # Group results by category
     category_order = ["route_definition", "network_call", "telemetry", "devops"]
     category_labels = {
