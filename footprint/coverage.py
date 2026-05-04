@@ -48,11 +48,13 @@ def analyze_coverage(results: list[ScanResult]) -> None:
     in non-test files. Test files and pure network_call files are left
     with coverage="".
     """
-    # Collect all URL paths seen in test-file network calls
+    # Collect all URL paths seen in test files — either outbound calls (network_call)
+    # or mock route definitions (route_definition), since test suites often register
+    # mock routers rather than making real HTTP calls (e.g. FastAPI TestClient setup).
     evidence_paths: list[str] = []
     for r in results:
         for m in r.matches:
-            if m.context == "test" and m.category == "network_call":
+            if m.context == "test" and m.category in ("network_call", "route_definition"):
                 evidence_paths.extend(_extract_paths(m.line_content))
 
     # Tag route-definition results in non-test files

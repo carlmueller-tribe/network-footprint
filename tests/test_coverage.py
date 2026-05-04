@@ -107,6 +107,29 @@ def test_multiple_routes_mixed_coverage() -> None:
     assert route_result.coverage == "likely_active"
 
 
+def test_mock_router_in_test_file_counts_as_evidence() -> None:
+    """Test files using @router.get() decorator-style route definitions (not HTTP calls)
+    should still count as coverage evidence — mirrors real usage like test_openapi_inventory.py."""
+    prod_route = _route_result("app/health.py", ["/health"])
+    # test file defines a mock router — category is route_definition, context is test
+    mock_route_match = Match(
+        pattern="test-route",
+        category="route_definition",
+        stack="python",
+        line=44,
+        line_content='@public_router.get("/health")',
+        context="test",
+    )
+    test_file = ScanResult(
+        file="tests/test_openapi_inventory.py",
+        categories=["route_definition"],
+        matches=[mock_route_match],
+    )
+    results = [prod_route, test_file]
+    analyze_coverage(results)
+    assert prod_route.coverage == "likely_active"
+
+
 def test_no_test_files_gives_no_test_coverage() -> None:
     results = [_route_result("routes.py", ["/health"])]
     analyze_coverage(results)
