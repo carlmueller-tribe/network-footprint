@@ -85,10 +85,11 @@ def format_markdown(results: list[ScanResult], repo_root: str = "") -> str:
     lines.append("")
 
     # Group results by category
-    category_order = ["route_definition", "network_call", "devops"]
+    category_order = ["route_definition", "network_call", "telemetry", "devops"]
     category_labels = {
         "route_definition": "Route Definitions",
         "network_call": "Network Calls",
+        "telemetry": "Telemetry & Observability",
         "devops": "DevOps",
     }
 

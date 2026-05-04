@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
 
-from footprint.heuristics import is_comment, is_string_literal, is_test_file
+from footprint.heuristics import is_comment, is_string_literal, is_test_file, reclassify_by_url
 from footprint.manifest import ManifestConfig
 from footprint.patterns import ALL_PATTERNS, PatternSpec
 
@@ -159,10 +159,12 @@ class Scanner:
                     key = (p["pattern"], lineno)
                     if key not in seen:
                         seen.add(key)
+                        raw_category = p["category"]
+                        category = reclassify_by_url(line, raw_category)
                         matches.append(
                             Match(
                                 pattern=p["pattern"],
-                                category=p["category"],
+                                category=category,
                                 stack=p["stack"],
                                 line=lineno,
                                 source=str(p.get("source", "default")),

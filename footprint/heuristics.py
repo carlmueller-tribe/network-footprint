@@ -32,3 +32,25 @@ def is_string_literal(line: str, match_pos: int) -> bool:
 def is_test_file(path: str) -> bool:
     """Return True if the file path matches known test file patterns."""
     return any(p.search(path) is not None for p in _TEST_PATTERNS)
+
+
+_RELATIVE_URL = re.compile(r"""['"](/[a-zA-Z0-9_-][^'"?\s]*)['"]""")
+_EXTERNAL_URL = re.compile(r"""https?://""")
+
+
+def reclassify_by_url(line: str, current_category: str) -> str:
+    """
+    Reclassify network_call → route_definition for call-site patterns
+    where the line contains a relative URL (internal app call).
+
+    - Relative URL (e.g. '/api/users') → route_definition (calling own backend)
+    - Absolute external URL (e.g. 'https://api.stripe.com') → keep as network_call
+    - No URL in line (e.g. bare import statement) → unchanged
+    """
+    if current_category != "network_call":
+        return current_category
+    if _EXTERNAL_URL.search(line):
+        return "network_call"
+    if _RELATIVE_URL.search(line):
+        return "route_definition"
+    return current_category

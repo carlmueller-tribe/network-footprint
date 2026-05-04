@@ -74,4 +74,32 @@ DEVOPS_PATTERNS: list[PatternSpec] = [
     {"pattern": r"LoadBalancer", "category": "devops", "stack": "devops"},
 ]
 
-ALL_PATTERNS: list[PatternSpec] = NODE_PATTERNS + PYTHON_PATTERNS + DEVOPS_PATTERNS
+TELEMETRY_PATTERNS: list[PatternSpec] = [
+    # Python
+    {"pattern": r"import sentry_sdk", "category": "telemetry", "stack": "python"},
+    {"pattern": r"from sentry_sdk", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import ddtrace", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import datadog", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import opentelemetry", "category": "telemetry", "stack": "python"},
+    {"pattern": r"from opentelemetry", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import newrelic", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import rollbar", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import posthog", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import mixpanel", "category": "telemetry", "stack": "python"},
+    {"pattern": r"import prometheus_client", "category": "telemetry", "stack": "python"},
+    # Node
+    {"pattern": r"from ['\"]@sentry/", "category": "telemetry", "stack": "node"},
+    {"pattern": r"require.*@sentry/", "category": "telemetry", "stack": "node"},
+    {"pattern": r"from ['\"]@opentelemetry/", "category": "telemetry", "stack": "node"},
+    {"pattern": r"from ['\"]@segment/", "category": "telemetry", "stack": "node"},
+    {"pattern": r"from ['\"]posthog-node", "category": "telemetry", "stack": "node"},
+    {"pattern": r"from ['\"]mixpanel", "category": "telemetry", "stack": "node"},
+    {"pattern": r"from ['\"]newrelic", "category": "telemetry", "stack": "node"},
+]
+
+ALL_PATTERNS: list[PatternSpec] = [
+    *NODE_PATTERNS,
+    *PYTHON_PATTERNS,
+    *DEVOPS_PATTERNS,
+    *TELEMETRY_PATTERNS,
+]

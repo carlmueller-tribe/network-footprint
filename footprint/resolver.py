@@ -206,21 +206,109 @@ KNOWN_PACKAGES: dict[str, dict[str, Any]] = {
     "numpy": {"network_capable": False, "import_name": "numpy", "category": None},
     "pandas": {"network_capable": False, "import_name": "pandas", "category": None},
     "pydantic": {"network_capable": False, "import_name": "pydantic", "category": None},
+    # Telemetry / observability — background calls, not core function
+    "sentry-sdk": {"network_capable": True, "import_name": "sentry_sdk", "category": "telemetry"},
+    "datadog": {"network_capable": True, "import_name": "datadog", "category": "telemetry"},
+    "ddtrace": {"network_capable": True, "import_name": "ddtrace", "category": "telemetry"},
+    "opentelemetry-sdk": {
+        "network_capable": True,
+        "import_name": "opentelemetry",
+        "category": "telemetry",
+    },
+    "opentelemetry-api": {
+        "network_capable": True,
+        "import_name": "opentelemetry",
+        "category": "telemetry",
+    },
+    "segment-analytics-python": {
+        "network_capable": True,
+        "import_name": "segment",
+        "category": "telemetry",
+    },
+    "analytics-python": {
+        "network_capable": True,
+        "import_name": "analytics",
+        "category": "telemetry",
+    },
+    "posthog": {"network_capable": True, "import_name": "posthog", "category": "telemetry"},
+    "mixpanel": {"network_capable": True, "import_name": "mixpanel", "category": "telemetry"},
+    "amplitude": {"network_capable": True, "import_name": "amplitude", "category": "telemetry"},
+    "newrelic": {"network_capable": True, "import_name": "newrelic", "category": "telemetry"},
+    "rollbar": {"network_capable": True, "import_name": "rollbar", "category": "telemetry"},
+    "bugsnag": {"network_capable": True, "import_name": "bugsnag", "category": "telemetry"},
+    "honeybadger": {
+        "network_capable": True,
+        "import_name": "honeybadger",
+        "category": "telemetry",
+    },
+    "prometheus-client": {
+        "network_capable": True,
+        "import_name": "prometheus_client",
+        "category": "telemetry",
+    },
+    # Node telemetry
+    "@sentry/node": {
+        "network_capable": True,
+        "import_name": "@sentry/node",
+        "category": "telemetry",
+    },
+    "@sentry/browser": {
+        "network_capable": True,
+        "import_name": "@sentry/browser",
+        "category": "telemetry",
+    },
+    "@datadog/datadog-ci": {
+        "network_capable": True,
+        "import_name": "@datadog/datadog-ci",
+        "category": "telemetry",
+    },
+    "@opentelemetry/sdk-node": {
+        "network_capable": True,
+        "import_name": "@opentelemetry/sdk-node",
+        "category": "telemetry",
+    },
+    "@segment/analytics-node": {
+        "network_capable": True,
+        "import_name": "@segment/analytics-node",
+        "category": "telemetry",
+    },
+    "posthog-node": {
+        "network_capable": True,
+        "import_name": "posthog-node",
+        "category": "telemetry",
+    },
+    "mixpanel-browser": {
+        "network_capable": True,
+        "import_name": "mixpanel-browser",
+        "category": "telemetry",
+    },
+    "pino": {"network_capable": False, "import_name": "pino", "category": None},
+    "winston": {"network_capable": False, "import_name": "winston", "category": None},
 }
 
 _CLASSIFIER_PROMPT = """\
 You are a code analysis assistant. Given a list of package names, classify each one.
 
 For each package return:
-- network_capable: true if the package makes or handles HTTP/TCP/WebSocket or other network calls
-- import_name: the canonical Python or JS import name (which may differ from the package name)
-- category: "network_call" if it makes outbound calls, "route_definition" if it defines server
-  routes, null if neither
+- network_capable: true if the package makes or handles any outbound network connections
+- import_name: the canonical Python or JS import name (may differ from package name)
+- category: one of:
+    "network_call"     — explicit developer-initiated calls to an external third-party service
+                         (e.g. payment APIs, AI inference, cloud SDKs, external REST clients)
+    "route_definition" — defines or calls internal app routes (server frameworks, internal
+                         HTTP clients)
+    "telemetry"        — background/implicit calls to monitoring, analytics, or observability
+                         services that are a side-effect of SDK init, not core app function
+                         (e.g. error tracking, metrics, distributed tracing, analytics events)
+    null               — not network-related
 
 Respond ONLY with a JSON array, no preamble, no markdown fences:
 [
-  {{ "package": "stripe", "network_capable": true, "import_name": "stripe",
-     "category": "network_call" }},
+  {{"package": "stripe", "network_capable": true, "import_name": "stripe",
+    "category": "network_call"}},
+  {{"package": "sentry-sdk", "network_capable": true, "import_name": "sentry_sdk",
+    "category": "telemetry"}},
+  {{"package": "numpy", "network_capable": false, "import_name": "numpy", "category": null}},
   ...
 ]
 
