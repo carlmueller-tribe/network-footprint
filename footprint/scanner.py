@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
 
+from footprint.heuristics import is_comment, is_string_literal, is_test_file
 from footprint.manifest import ManifestConfig
 from footprint.patterns import ALL_PATTERNS, PatternSpec
 
@@ -32,6 +33,9 @@ class Match:
     source: str = "default"
     transitive: bool = False
     line_content: str = ""
+    in_comment: bool = False
+    in_string_literal: bool = False
+    context: str = ""  # "test" | ""
 
 
 @dataclass
@@ -115,6 +119,8 @@ class Scanner:
 
     def _scan_file(self, path: Path) -> list[Match]:
         is_devops = self._is_devops_file(path)
+        rel_path = str(path.relative_to(self._root))
+        context = "test" if is_test_file(rel_path) else ""
         try:
             lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
         except OSError:
@@ -125,7 +131,8 @@ class Scanner:
             for p in self._patterns:
                 if p["stack"] == "devops" and not is_devops:
                     continue
-                if re.search(p["pattern"], line):
+                re_match = re.search(p["pattern"], line)
+                if re_match is not None:
                     key = (p["pattern"], lineno)
                     if key not in seen:
                         seen.add(key)
@@ -138,6 +145,9 @@ class Scanner:
                                 source=str(p.get("source", "default")),
                                 transitive=bool(p.get("transitive", False)),
                                 line_content=line,
+                                in_comment=is_comment(line, p["stack"]),
+                                in_string_literal=is_string_literal(line, re_match.start()),
+                                context=context,
                             )
                         )
         return matches

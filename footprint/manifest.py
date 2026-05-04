@@ -21,6 +21,17 @@ DEFAULT_EXCLUDES: list[str] = [
     "*.pyc",
 ]
 
+# Add these to exclude to skip test files entirely (instead of flagging them).
+# By default test files are included but flagged context="test" with reduced confidence.
+SUGGESTED_TEST_EXCLUDES: list[str] = [
+    "tests",
+    "__tests__",
+    "*.test.ts",
+    "*.test.js",
+    "*.spec.ts",
+    "*.spec.py",
+]
+
 
 @dataclass
 class ImportOverride:
