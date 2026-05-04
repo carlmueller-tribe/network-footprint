@@ -152,12 +152,15 @@ _SKIP_DIRS = frozenset(
 
 
 def _find_manifests(repo_root: Path, filename: str) -> list[Path]:
-    """Find all manifest files with the given name under repo_root, skipping common build dirs."""
+    """Find all manifest files with the given name under repo_root, skipping build/dep dirs.
+
+    Uses os.walk with in-place dir pruning so node_modules/.venv trees are never traversed.
+    """
     found: list[Path] = []
-    for path in repo_root.rglob(filename):
-        if any(part in _SKIP_DIRS for part in path.relative_to(repo_root).parts):
-            continue
-        found.append(path)
+    for dirpath, dirnames, filenames in os.walk(repo_root):
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+        if filename in filenames:
+            found.append(Path(dirpath) / filename)
     return found
 
 
