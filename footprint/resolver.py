@@ -335,6 +335,405 @@ KNOWN_PACKAGES: dict[str, dict[str, Any]] = {
     },
     "pino": {"network_capable": False, "import_name": "pino", "category": None},
     "winston": {"network_capable": False, "import_name": "winston", "category": None},
+    # Node — data fetching / real-time
+    "swr": {"network_capable": True, "import_name": "swr", "category": "network_call"},
+    "@tanstack/react-query": {
+        "network_capable": True,
+        "import_name": "@tanstack/react-query",
+        "category": "network_call",
+    },
+    "@tanstack/query-core": {
+        "network_capable": True,
+        "import_name": "@tanstack/query-core",
+        "category": "network_call",
+    },
+    "@microsoft/fetch-event-source": {
+        "network_capable": True,
+        "import_name": "@microsoft/fetch-event-source",
+        "category": "network_call",
+    },
+    "eventsource": {
+        "network_capable": True,
+        "import_name": "eventsource",
+        "category": "network_call",
+    },
+    "reconnecting-websocket": {
+        "network_capable": True,
+        "import_name": "reconnecting-websocket",
+        "category": "network_call",
+    },
+    # Node — frameworks / routing
+    "next": {"network_capable": True, "import_name": "next", "category": "route_definition"},
+    "nuxt": {"network_capable": True, "import_name": "nuxt", "category": "route_definition"},
+    "hono": {"network_capable": True, "import_name": "hono", "category": "route_definition"},
+    "h3": {"network_capable": True, "import_name": "h3", "category": "route_definition"},
+    "@hapi/hapi": {
+        "network_capable": True,
+        "import_name": "@hapi/hapi",
+        "category": "route_definition",
+    },
+    "nestjs": {
+        "network_capable": True,
+        "import_name": "@nestjs/core",
+        "category": "route_definition",
+    },
+    "@nestjs/core": {
+        "network_capable": True,
+        "import_name": "@nestjs/core",
+        "category": "route_definition",
+    },
+    "@nestjs/common": {
+        "network_capable": True,
+        "import_name": "@nestjs/common",
+        "category": "route_definition",
+    },
+    "react-router-dom": {
+        "network_capable": True,
+        "import_name": "react-router-dom",
+        "category": "route_definition",
+    },
+    "react-router": {
+        "network_capable": True,
+        "import_name": "react-router",
+        "category": "route_definition",
+    },
+    "vue-router": {
+        "network_capable": True,
+        "import_name": "vue-router",
+        "category": "route_definition",
+    },
+    # Node — payments / messaging / infra
+    "stripe": {"network_capable": True, "import_name": "stripe", "category": "network_call"},
+    "@stripe/stripe-js": {
+        "network_capable": True,
+        "import_name": "@stripe/stripe-js",
+        "category": "network_call",
+    },
+    "twilio": {"network_capable": True, "import_name": "twilio", "category": "network_call"},
+    "@sendgrid/mail": {
+        "network_capable": True,
+        "import_name": "@sendgrid/mail",
+        "category": "network_call",
+    },
+    "nodemailer": {
+        "network_capable": True,
+        "import_name": "nodemailer",
+        "category": "network_call",
+    },
+    "@slack/web-api": {
+        "network_capable": True,
+        "import_name": "@slack/web-api",
+        "category": "network_call",
+    },
+    "@slack/bolt": {
+        "network_capable": True,
+        "import_name": "@slack/bolt",
+        "category": "network_call",
+    },
+    "firebase": {"network_capable": True, "import_name": "firebase", "category": "network_call"},
+    "firebase-admin": {
+        "network_capable": True,
+        "import_name": "firebase-admin",
+        "category": "network_call",
+    },
+    "@supabase/supabase-js": {
+        "network_capable": True,
+        "import_name": "@supabase/supabase-js",
+        "category": "network_call",
+    },
+    "supabase": {
+        "network_capable": True,
+        "import_name": "@supabase/supabase-js",
+        "category": "network_call",
+    },
+    "ioredis": {"network_capable": True, "import_name": "ioredis", "category": "network_call"},
+    "redis": {"network_capable": True, "import_name": "redis", "category": "network_call"},
+    # Node — AWS
+    "aws-sdk": {"network_capable": True, "import_name": "aws-sdk", "category": "network_call"},
+    "@aws-sdk/client-s3": {
+        "network_capable": True,
+        "import_name": "@aws-sdk/client-s3",
+        "category": "network_call",
+    },
+    "@aws-sdk/client-ses": {
+        "network_capable": True,
+        "import_name": "@aws-sdk/client-ses",
+        "category": "network_call",
+    },
+    "@aws-sdk/client-sqs": {
+        "network_capable": True,
+        "import_name": "@aws-sdk/client-sqs",
+        "category": "network_call",
+    },
+    # Node — AI
+    "@anthropic-ai/sdk": {
+        "network_capable": True,
+        "import_name": "@anthropic-ai/sdk",
+        "category": "network_call",
+    },
+    "@google/generative-ai": {
+        "network_capable": True,
+        "import_name": "@google/generative-ai",
+        "category": "network_call",
+    },
+    "cohere-ai": {
+        "network_capable": True,
+        "import_name": "cohere-ai",
+        "category": "network_call",
+    },
+    "groq-sdk": {
+        "network_capable": True,
+        "import_name": "groq-sdk",
+        "category": "network_call",
+    },
+    # Node — telemetry (additional)
+    "@sentry/react": {
+        "network_capable": True,
+        "import_name": "@sentry/react",
+        "category": "telemetry",
+    },
+    "@sentry/nextjs": {
+        "network_capable": True,
+        "import_name": "@sentry/nextjs",
+        "category": "telemetry",
+    },
+    "@sentry/vue": {
+        "network_capable": True,
+        "import_name": "@sentry/vue",
+        "category": "telemetry",
+    },
+    "@opentelemetry/sdk-trace-web": {
+        "network_capable": True,
+        "import_name": "@opentelemetry/sdk-trace-web",
+        "category": "telemetry",
+    },
+    "@opentelemetry/auto-instrumentations-node": {
+        "network_capable": True,
+        "import_name": "@opentelemetry/auto-instrumentations-node",
+        "category": "telemetry",
+    },
+    # Python — network / HTTP
+    "urllib3": {
+        "network_capable": True,
+        "import_name": "urllib3",
+        "category": "network_call",
+    },
+    "httpcore": {
+        "network_capable": True,
+        "import_name": "httpcore",
+        "category": "network_call",
+    },
+    "websockets": {
+        "network_capable": True,
+        "import_name": "websockets",
+        "category": "network_call",
+    },
+    "websocket-client": {
+        "network_capable": True,
+        "import_name": "websocket",
+        "category": "network_call",
+    },
+    "grpcio": {"network_capable": True, "import_name": "grpc", "category": "network_call"},
+    "paramiko": {"network_capable": True, "import_name": "paramiko", "category": "network_call"},
+    # Python — frameworks / servers
+    "uvicorn": {
+        "network_capable": True,
+        "import_name": "uvicorn",
+        "category": "route_definition",
+    },
+    "gunicorn": {
+        "network_capable": True,
+        "import_name": "gunicorn",
+        "category": "route_definition",
+    },
+    "starlette": {
+        "network_capable": True,
+        "import_name": "starlette",
+        "category": "route_definition",
+    },
+    "tornado": {
+        "network_capable": True,
+        "import_name": "tornado",
+        "category": "route_definition",
+    },
+    "falcon": {
+        "network_capable": True,
+        "import_name": "falcon",
+        "category": "route_definition",
+    },
+    "litestar": {
+        "network_capable": True,
+        "import_name": "litestar",
+        "category": "route_definition",
+    },
+    "sanic": {"network_capable": True, "import_name": "sanic", "category": "route_definition"},
+    # Python — payments / messaging / infra
+    "sendgrid": {
+        "network_capable": True,
+        "import_name": "sendgrid",
+        "category": "network_call",
+    },
+    "slack-sdk": {
+        "network_capable": True,
+        "import_name": "slack_sdk",
+        "category": "network_call",
+    },
+    "slack_bolt": {
+        "network_capable": True,
+        "import_name": "slack_bolt",
+        "category": "network_call",
+    },
+    "aioredis": {
+        "network_capable": True,
+        "import_name": "aioredis",
+        "category": "network_call",
+    },
+    "pymongo": {"network_capable": True, "import_name": "pymongo", "category": "network_call"},
+    "motor": {"network_capable": True, "import_name": "motor", "category": "network_call"},
+    "elasticsearch": {
+        "network_capable": True,
+        "import_name": "elasticsearch",
+        "category": "network_call",
+    },
+    "opensearch-py": {
+        "network_capable": True,
+        "import_name": "opensearchpy",
+        "category": "network_call",
+    },
+    "celery": {"network_capable": True, "import_name": "celery", "category": "network_call"},
+    "pika": {"network_capable": True, "import_name": "pika", "category": "network_call"},
+    "aiokafka": {
+        "network_capable": True,
+        "import_name": "aiokafka",
+        "category": "network_call",
+    },
+    "kafka-python": {
+        "network_capable": True,
+        "import_name": "kafka",
+        "category": "network_call",
+    },
+    "msal": {"network_capable": True, "import_name": "msal", "category": "network_call"},
+    # Python — cloud
+    "google-cloud-storage": {
+        "network_capable": True,
+        "import_name": "google.cloud.storage",
+        "category": "network_call",
+    },
+    "google-cloud-bigquery": {
+        "network_capable": True,
+        "import_name": "google.cloud.bigquery",
+        "category": "network_call",
+    },
+    "google-auth": {
+        "network_capable": True,
+        "import_name": "google.auth",
+        "category": "network_call",
+    },
+    "google-api-python-client": {
+        "network_capable": True,
+        "import_name": "googleapiclient",
+        "category": "network_call",
+    },
+    "azure-storage-blob": {
+        "network_capable": True,
+        "import_name": "azure.storage.blob",
+        "category": "network_call",
+    },
+    "azure-identity": {
+        "network_capable": True,
+        "import_name": "azure.identity",
+        "category": "network_call",
+    },
+    "azure-keyvault-secrets": {
+        "network_capable": True,
+        "import_name": "azure.keyvault.secrets",
+        "category": "network_call",
+    },
+    "kubernetes": {
+        "network_capable": True,
+        "import_name": "kubernetes",
+        "category": "network_call",
+    },
+    # Python — AI / LLM
+    "langchain": {
+        "network_capable": True,
+        "import_name": "langchain",
+        "category": "network_call",
+    },
+    "langchain-openai": {
+        "network_capable": True,
+        "import_name": "langchain_openai",
+        "category": "network_call",
+    },
+    "langchain-anthropic": {
+        "network_capable": True,
+        "import_name": "langchain_anthropic",
+        "category": "network_call",
+    },
+    "langchain-google-genai": {
+        "network_capable": True,
+        "import_name": "langchain_google_genai",
+        "category": "network_call",
+    },
+    "cohere": {"network_capable": True, "import_name": "cohere", "category": "network_call"},
+    "groq": {"network_capable": True, "import_name": "groq", "category": "network_call"},
+    "together": {"network_capable": True, "import_name": "together", "category": "network_call"},
+    "litellm": {"network_capable": True, "import_name": "litellm", "category": "network_call"},
+    "replicate": {
+        "network_capable": True,
+        "import_name": "replicate",
+        "category": "network_call",
+    },
+    "huggingface-hub": {
+        "network_capable": True,
+        "import_name": "huggingface_hub",
+        "category": "network_call",
+    },
+    "openai-agents": {
+        "network_capable": True,
+        "import_name": "agents",
+        "category": "network_call",
+    },
+    "mcp": {"network_capable": True, "import_name": "mcp", "category": "network_call"},
+    # Python — telemetry (additional)
+    "opentelemetry-distro": {
+        "network_capable": True,
+        "import_name": "opentelemetry",
+        "category": "telemetry",
+    },
+    "opentelemetry-exporter-otlp": {
+        "network_capable": True,
+        "import_name": "opentelemetry",
+        "category": "telemetry",
+    },
+    "logfire": {"network_capable": True, "import_name": "logfire", "category": "telemetry"},
+    "elastic-apm": {
+        "network_capable": True,
+        "import_name": "elasticapm",
+        "category": "telemetry",
+    },
+    # Python — not network
+    "pydantic-settings": {
+        "network_capable": False,
+        "import_name": "pydantic_settings",
+        "category": None,
+    },
+    "sqlalchemy": {"network_capable": False, "import_name": "sqlalchemy", "category": None},
+    "alembic": {"network_capable": False, "import_name": "alembic", "category": None},
+    "orjson": {"network_capable": False, "import_name": "orjson", "category": None},
+    "pyyaml": {"network_capable": False, "import_name": "yaml", "category": None},
+    "rich": {"network_capable": False, "import_name": "rich", "category": None},
+    "typer": {"network_capable": False, "import_name": "typer", "category": None},
+    "click": {"network_capable": False, "import_name": "click", "category": None},
+    "aiofiles": {"network_capable": False, "import_name": "aiofiles", "category": None},
+    "backoff": {"network_capable": False, "import_name": "backoff", "category": None},
+    "tenacity": {"network_capable": False, "import_name": "tenacity", "category": None},
+    "cryptography": {"network_capable": False, "import_name": "cryptography", "category": None},
+    "passlib": {"network_capable": False, "import_name": "passlib", "category": None},
+    "python-jose": {"network_capable": False, "import_name": "jose", "category": None},
+    "pyjwt": {"network_capable": False, "import_name": "jwt", "category": None},
+    "pdf2image": {"network_capable": False, "import_name": "pdf2image", "category": None},
+    "boto3-stubs": {"network_capable": False, "import_name": "mypy_boto3", "category": None},
 }
 
 _CLASSIFIER_PROMPT = """\
@@ -410,6 +809,10 @@ def _classify_with_sdk(packages: list[str]) -> str:
     content = msg.content[0]
     if content.type != "text":
         raise RuntimeError("Unexpected response type from Claude SDK")
+    print(
+        f"[footprint] Claude SDK: {msg.usage.input_tokens} in / {msg.usage.output_tokens} out",  # noqa: E501
+        file=sys.stderr,
+    )
     return str(content.text)
 
 

@@ -32,21 +32,21 @@ def test_known_package_pillow_not_network_capable() -> None:
 
 def test_unknown_package_batched_to_claude() -> None:
     deps = [
-        ParsedDep(name="stripe", ecosystem="node"),
-        ParsedDep(name="twilio", ecosystem="node"),
+        ParsedDep(name="my-internal-http-client", ecosystem="node"),
+        ParsedDep(name="acme-api-sdk", ecosystem="node"),
     ]
     claude_response = json.dumps(
         [
             {
-                "package": "stripe",
+                "package": "my-internal-http-client",
                 "network_capable": True,
-                "import_name": "stripe",
+                "import_name": "my-internal-http-client",
                 "category": "network_call",
             },
             {
-                "package": "twilio",
+                "package": "acme-api-sdk",
                 "network_capable": True,
-                "import_name": "twilio",
+                "import_name": "acme-api-sdk",
                 "category": "network_call",
             },
         ]
@@ -57,22 +57,22 @@ def test_unknown_package_batched_to_claude() -> None:
         results = resolve_packages(deps)
         mock_claude.assert_called_once()  # batched — not called twice
 
-    stripe = next(r for r in results if r.package == "stripe")
-    assert stripe.network_capable is True
-    assert stripe.source == "claude"
+    r = next(r for r in results if r.package == "my-internal-http-client")
+    assert r.network_capable is True
+    assert r.source == "claude"
 
 
 def test_unknown_packages_and_known_mixed() -> None:
     deps = [
         ParsedDep(name="requests", ecosystem="python"),  # known
-        ParsedDep(name="stripe", ecosystem="node"),  # unknown
+        ParsedDep(name="acme-api-sdk", ecosystem="node"),  # unknown
     ]
     claude_response = json.dumps(
         [
             {
-                "package": "stripe",
+                "package": "acme-api-sdk",
                 "network_capable": True,
-                "import_name": "stripe",
+                "import_name": "acme-api-sdk",
                 "category": "network_call",
             },
         ]
@@ -81,7 +81,7 @@ def test_unknown_packages_and_known_mixed() -> None:
         results = resolve_packages(deps)
 
     assert any(r.package == "requests" and r.source == "lookup" for r in results)
-    assert any(r.package == "stripe" and r.source == "claude" for r in results)
+    assert any(r.package == "acme-api-sdk" and r.source == "claude" for r in results)
 
 
 def test_claude_failure_treated_as_unknown_package() -> None:
@@ -101,13 +101,13 @@ def test_transitive_flag_preserved() -> None:
 
 
 def test_claude_subprocess_tried_before_sdk() -> None:
-    deps = [ParsedDep(name="stripe", ecosystem="node")]
+    deps = [ParsedDep(name="acme-api-sdk", ecosystem="node")]
     claude_json = json.dumps(
         [
             {
-                "package": "stripe",
+                "package": "acme-api-sdk",
                 "network_capable": True,
-                "import_name": "stripe",
+                "import_name": "acme-api-sdk",
                 "category": "network_call",
             },
         ]
@@ -124,13 +124,13 @@ def test_claude_subprocess_tried_before_sdk() -> None:
 
 
 def test_sdk_used_when_claude_cli_absent() -> None:
-    deps = [ParsedDep(name="stripe", ecosystem="node")]
+    deps = [ParsedDep(name="acme-api-sdk", ecosystem="node")]
     sdk_json = json.dumps(
         [
             {
-                "package": "stripe",
+                "package": "acme-api-sdk",
                 "network_capable": True,
-                "import_name": "stripe",
+                "import_name": "acme-api-sdk",
                 "category": "network_call",
             },
         ]
