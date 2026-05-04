@@ -737,6 +737,166 @@ KNOWN_PACKAGES: dict[str, dict[str, Any]] = {
     "pyjwt": {"network_capable": False, "import_name": "jwt", "category": None},
     "pdf2image": {"network_capable": False, "import_name": "pdf2image", "category": None},
     "boto3-stubs": {"network_capable": False, "import_name": "mypy_boto3", "category": None},
+    # Node — UI component libraries (not network-capable)
+    "@radix-ui/react-accordion": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-accordion",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-alert-dialog": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-alert-dialog",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-checkbox": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-checkbox",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-dialog": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-dialog",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-dropdown-menu": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-dropdown-menu",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-icons": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-icons",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-label": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-label",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-popover": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-popover",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-select": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-select",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-slot": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-slot",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-tabs": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-tabs",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-toast": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-toast",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-toolbar": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-toolbar",
+        "category": None,
+    },  # noqa: E501
+    "@radix-ui/react-tooltip": {
+        "network_capable": False,
+        "import_name": "@radix-ui/react-tooltip",
+        "category": None,
+    },  # noqa: E501
+    "@base-ui/react": {"network_capable": False, "import_name": "@base-ui/react", "category": None},
+    "@headlessui/react": {
+        "network_capable": False,
+        "import_name": "@headlessui/react",
+        "category": None,
+    },  # noqa: E501
+    "@headlessui/vue": {
+        "network_capable": False,
+        "import_name": "@headlessui/vue",
+        "category": None,
+    },  # noqa: E501
+    "@heroicons/react": {
+        "network_capable": False,
+        "import_name": "@heroicons/react",
+        "category": None,
+    },  # noqa: E501
+    "shadcn": {"network_capable": False, "import_name": "shadcn", "category": None},
+    "lucide-react": {"network_capable": False, "import_name": "lucide-react", "category": None},
+    "react-icons": {"network_capable": False, "import_name": "react-icons", "category": None},
+    "framer-motion": {"network_capable": False, "import_name": "framer-motion", "category": None},
+    "@mui/material": {"network_capable": False, "import_name": "@mui/material", "category": None},
+    "@mui/icons-material": {
+        "network_capable": False,
+        "import_name": "@mui/icons-material",
+        "category": None,
+    },  # noqa: E501
+    "antd": {"network_capable": False, "import_name": "antd", "category": None},
+    "sonner": {"network_capable": False, "import_name": "sonner", "category": None},
+    "cmdk": {"network_capable": False, "import_name": "cmdk", "category": None},
+    # Node — styling / forms / utilities (not network-capable)
+    "tailwindcss": {"network_capable": False, "import_name": "tailwindcss", "category": None},
+    "@tailwindcss/vite": {
+        "network_capable": False,
+        "import_name": "@tailwindcss/vite",
+        "category": None,
+    },  # noqa: E501
+    "class-variance-authority": {
+        "network_capable": False,
+        "import_name": "class-variance-authority",
+        "category": None,
+    },  # noqa: E501
+    "clsx": {"network_capable": False, "import_name": "clsx", "category": None},
+    "tailwind-merge": {"network_capable": False, "import_name": "tailwind-merge", "category": None},  # noqa: E501
+    "tw-animate-css": {"network_capable": False, "import_name": "tw-animate-css", "category": None},  # noqa: E501
+    "react-hook-form": {
+        "network_capable": False,
+        "import_name": "react-hook-form",
+        "category": None,
+    },  # noqa: E501
+    "@hookform/resolvers": {
+        "network_capable": False,
+        "import_name": "@hookform/resolvers",
+        "category": None,
+    },  # noqa: E501
+    "zod": {"network_capable": False, "import_name": "zod", "category": None},
+    "yup": {"network_capable": False, "import_name": "yup", "category": None},
+    "react": {"network_capable": False, "import_name": "react", "category": None},
+    "react-dom": {"network_capable": False, "import_name": "react-dom", "category": None},
+    "react-error-boundary": {
+        "network_capable": False,
+        "import_name": "react-error-boundary",
+        "category": None,
+    },  # noqa: E501
+    "react-markdown": {"network_capable": False, "import_name": "react-markdown", "category": None},  # noqa: E501
+    "react-day-picker": {
+        "network_capable": False,
+        "import_name": "react-day-picker",
+        "category": None,
+    },  # noqa: E501
+    "react-force-graph-2d": {
+        "network_capable": False,
+        "import_name": "react-force-graph-2d",
+        "category": None,
+    },  # noqa: E501
+    "remark-gfm": {"network_capable": False, "import_name": "remark-gfm", "category": None},
+    "date-fns": {"network_capable": False, "import_name": "date-fns", "category": None},
+    "dayjs": {"network_capable": False, "import_name": "dayjs", "category": None},
+    "lodash": {"network_capable": False, "import_name": "lodash", "category": None},
+    "zustand": {"network_capable": False, "import_name": "zustand", "category": None},
+    "jotai": {"network_capable": False, "import_name": "jotai", "category": None},
+    "immer": {"network_capable": False, "import_name": "immer", "category": None},
+    "use-debounce": {"network_capable": False, "import_name": "use-debounce", "category": None},
+    "uuid": {"network_capable": False, "import_name": "uuid", "category": None},
+    "nanoid": {"network_capable": False, "import_name": "nanoid", "category": None},
+    "typescript": {"network_capable": False, "import_name": "typescript", "category": None},
+    "vite": {"network_capable": False, "import_name": "vite", "category": None},
+    "vitest": {"network_capable": False, "import_name": "vitest", "category": None},
+    "eslint": {"network_capable": False, "import_name": "eslint", "category": None},
+    "prettier": {"network_capable": False, "import_name": "prettier", "category": None},
 }
 
 _CLASSIFIER_PROMPT = """\
@@ -874,9 +1034,14 @@ def resolve_packages(
         else:
             unknown.append(dep)
 
-    if unknown:
+    # Only classify direct deps via Claude. Transitive deps not in the lookup table are
+    # silently skipped — lockfiles contain hundreds of sub-dependencies that would
+    # overwhelm Claude and generate useless patterns.
+    direct_unknown = [d for d in unknown if not d.transitive]
+
+    if direct_unknown:
         try:
-            raw = _classify_with_claude([d.name for d in unknown])
+            raw = _classify_with_claude([d.name for d in direct_unknown])
             classified = _parse_claude_response(raw)
             classified_map: dict[str, dict[str, Any]] = {
                 item["package"]: item for item in classified if isinstance(item, dict)
@@ -888,7 +1053,7 @@ def resolve_packages(
             )
             classified_map = {}
 
-        for dep in unknown:
+        for dep in direct_unknown:
             item = classified_map.get(dep.name)
             if item:
                 results.append(
