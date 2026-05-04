@@ -36,6 +36,7 @@ class Match:
     in_comment: bool = False
     in_string_literal: bool = False
     context: str = ""  # "test" | ""
+    confidence: float = 0.0
 
 
 @dataclass
@@ -46,6 +47,8 @@ class ScanResult:
 
 
 class Scanner:
+    _BASE_CONFIDENCE: float = 0.7
+
     def __init__(
         self,
         repo_root: str,
@@ -67,6 +70,24 @@ class Scanner:
         ]
         self._patterns: list[PatternSpec] = base + injected
 
+    def _score_confidence(self, matches: list[Match]) -> None:
+        """Score confidence in-place. Called after _scan_file."""
+        for i, m in enumerate(matches):
+            score = self._BASE_CONFIDENCE
+            if m.in_comment:
+                score -= 0.4
+            if m.in_string_literal:
+                score -= 0.3
+            if m.context == "test":
+                score -= 0.1
+            if m.category == "route_definition":
+                score += 0.2
+            if m.source == "dependency_resolved":
+                score += 0.1
+            # bonus for additional matches in same file, capped at +0.3
+            score += min(i, 3) * 0.1
+            m.confidence = max(0.0, min(1.0, score))
+
     def run(self) -> list[ScanResult]:
         results: list[ScanResult] = []
         for path in sorted(self._root.rglob("*")):
@@ -79,6 +100,7 @@ class Scanner:
                 continue
             matches = self._scan_file(path)
             if matches:
+                self._score_confidence(matches)
                 results.append(
                     ScanResult(
                         file=str(rel),

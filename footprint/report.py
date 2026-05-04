@@ -16,9 +16,16 @@ def format_json(results: list[ScanResult]) -> str:
                 "stack": m.stack,
                 "line": m.line,
                 "source": m.source,
+                "confidence": round(m.confidence, 2),
             }
             if m.transitive:
                 entry["transitive"] = True
+            if m.in_comment:
+                entry["in_comment"] = True
+            if m.in_string_literal:
+                entry["in_string_literal"] = True
+            if m.context:
+                entry["context"] = m.context
             matches.append(entry)
         data.append(
             {
@@ -80,14 +87,14 @@ def format_markdown(results: list[ScanResult], repo_root: str = "") -> str:
         for result, matches in cat_results:
             lines.append(f"### `{result.file}`")
             lines.append("")
-            lines.append("| Line | Snippet |")
-            lines.append("|------|---------|")
+            lines.append("| Line | Confidence | Snippet |")
+            lines.append("|------|------------|---------|")
             for m in matches:
                 snippet = m.line_content.strip()
                 # Escape pipe chars in snippet so table doesn't break
                 snippet = snippet.replace("|", "\\|")
                 badge = " *(transitive)*" if m.transitive else ""
-                lines.append(f"| {m.line} | `{snippet}`{badge} |")
+                lines.append(f"| {m.line} | {m.confidence:.2f} | `{snippet}`{badge} |")
             lines.append("")
 
         lines.append("---")

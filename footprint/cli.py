@@ -26,11 +26,25 @@ def main() -> None:
     default=False,
     help="Skip dependency resolution (use default patterns only)",
 )
+@click.option(
+    "--min-confidence",
+    default=0.0,
+    type=float,
+    help="Only show matches at or above this confidence (0.0–1.0)",
+)
+@click.option(
+    "--no-transitive",
+    is_flag=True,
+    default=False,
+    help="Exclude matches from transitive dependencies",
+)
 def scan(
     repo_path: str,
     output: str,
     manifest_path: str | None,
     no_resolve: bool,
+    min_confidence: float,
+    no_transitive: bool,
 ) -> None:
     root = Path(repo_path).resolve()
     manifest = load_manifest(root, Path(manifest_path) if manifest_path else None)
@@ -59,6 +73,17 @@ def scan(
         str(root), manifest, extra_patterns=extra_patterns, remove_patterns=remove_patterns
     )
     results = scanner.run()
+
+    if no_transitive or min_confidence > 0.0:
+        for r in results:
+            r.matches = [
+                m
+                for m in r.matches
+                if (not no_transitive or not m.transitive) and m.confidence >= min_confidence
+            ]
+        results = [r for r in results if r.matches]
+        for r in results:
+            r.categories = sorted({m.category for m in r.matches})
 
     if output == "json":
         click.echo(format_json(results))
