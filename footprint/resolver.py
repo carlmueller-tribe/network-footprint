@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
+import subprocess
 import tomllib
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -136,3 +140,225 @@ def parse_all(repo_root: Path) -> list[ParsedDep]:
     result.extend(parse_go_mod(repo_root / "go.mod"))
     result.extend(parse_cargo_toml(repo_root / "Cargo.toml"))
     return result
+
+
+@dataclass
+class ResolvedPackage:
+    package: str
+    import_name: str
+    network_capable: bool
+    category: str | None
+    source: str  # "lookup" | "claude" | "manifest_override" | "claude_failed"
+    transitive: bool = False
+
+
+KNOWN_PACKAGES: dict[str, dict[str, Any]] = {
+    # Node
+    "axios": {"network_capable": True, "import_name": "axios", "category": "network_call"},
+    "node-fetch": {
+        "network_capable": True,
+        "import_name": "node-fetch",
+        "category": "network_call",
+    },
+    "got": {"network_capable": True, "import_name": "got", "category": "network_call"},
+    "superagent": {
+        "network_capable": True,
+        "import_name": "superagent",
+        "category": "network_call",
+    },
+    "ky": {"network_capable": True, "import_name": "ky", "category": "network_call"},
+    "undici": {"network_capable": True, "import_name": "undici", "category": "network_call"},
+    "ws": {"network_capable": True, "import_name": "ws", "category": "network_call"},
+    "socket.io-client": {
+        "network_capable": True,
+        "import_name": "socket.io-client",
+        "category": "network_call",
+    },
+    "@apollo/client": {
+        "network_capable": True,
+        "import_name": "@apollo/client",
+        "category": "network_call",
+    },
+    "graphql-request": {
+        "network_capable": True,
+        "import_name": "graphql-request",
+        "category": "network_call",
+    },
+    "express": {"network_capable": True, "import_name": "express", "category": "route_definition"},
+    "fastify": {"network_capable": True, "import_name": "fastify", "category": "route_definition"},
+    "koa": {"network_capable": True, "import_name": "koa", "category": "route_definition"},
+    # Python
+    "requests": {"network_capable": True, "import_name": "requests", "category": "network_call"},
+    "httpx": {"network_capable": True, "import_name": "httpx", "category": "network_call"},
+    "aiohttp": {"network_capable": True, "import_name": "aiohttp", "category": "network_call"},
+    "boto3": {"network_capable": True, "import_name": "boto3", "category": "network_call"},
+    "botocore": {"network_capable": True, "import_name": "botocore", "category": "network_call"},
+    "openai": {"network_capable": True, "import_name": "openai", "category": "network_call"},
+    "anthropic": {"network_capable": True, "import_name": "anthropic", "category": "network_call"},
+    "fastapi": {"network_capable": True, "import_name": "fastapi", "category": "route_definition"},
+    "flask": {"network_capable": True, "import_name": "flask", "category": "route_definition"},
+    "django": {"network_capable": True, "import_name": "django", "category": "route_definition"},
+    "pillow": {"network_capable": False, "import_name": "PIL", "category": None},
+    "opencv-python": {"network_capable": False, "import_name": "cv2", "category": None},
+    "python-dotenv": {"network_capable": False, "import_name": "dotenv", "category": None},
+    "numpy": {"network_capable": False, "import_name": "numpy", "category": None},
+    "pandas": {"network_capable": False, "import_name": "pandas", "category": None},
+    "pydantic": {"network_capable": False, "import_name": "pydantic", "category": None},
+}
+
+_CLASSIFIER_PROMPT = """\
+You are a code analysis assistant. Given a list of package names, classify each one.
+
+For each package return:
+- network_capable: true if the package makes or handles HTTP/TCP/WebSocket or other network calls
+- import_name: the canonical Python or JS import name (which may differ from the package name)
+- category: "network_call" if it makes outbound calls, "route_definition" if it defines server
+  routes, null if neither
+
+Respond ONLY with a JSON array, no preamble, no markdown fences:
+[
+  {{ "package": "stripe", "network_capable": true, "import_name": "stripe",
+     "category": "network_call" }},
+  ...
+]
+
+Packages to classify:
+{packages}
+"""
+
+
+def _classify_with_claude(packages: list[str]) -> str:
+    """Call Claude for package classification. Tries claude CLI subprocess first, SDK fallback."""
+    prompt = _CLASSIFIER_PROMPT.format(packages="\n".join(packages))
+    if shutil.which("claude"):
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+        raise RuntimeError(f"claude CLI failed: {result.stderr.strip()}")
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if api_key:
+        return _classify_with_sdk(packages)
+    raise RuntimeError(
+        "No Claude authentication available. "
+        "Install Claude Code (claude.ai/code) or set ANTHROPIC_API_KEY."
+    )
+
+
+def _classify_with_sdk(packages: list[str]) -> str:
+    """Call Claude via anthropic SDK using ANTHROPIC_API_KEY."""
+    import anthropic  # noqa: PLC0415
+
+    prompt = _CLASSIFIER_PROMPT.format(packages="\n".join(packages))
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    client = anthropic.Anthropic(api_key=api_key)
+    msg = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    content = msg.content[0]
+    if content.type != "text":
+        raise RuntimeError("Unexpected response type from Claude SDK")
+    return str(content.text)
+
+
+def _parse_claude_response(raw: str) -> list[dict[str, Any]]:
+    """Extract JSON array from Claude response, handling markdown fences."""
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        end_fence = next((i for i, ln in enumerate(lines[1:], 1) if ln.strip() == "```"), None)
+        text = "\n".join(lines[1:end_fence] if end_fence else lines[1:])
+    start = text.find("[")
+    end = text.rfind("]")
+    if start == -1 or end == -1:
+        return []
+    try:
+        return list(json.loads(text[start : end + 1]))
+    except json.JSONDecodeError:
+        return []
+
+
+def resolve_packages(
+    deps: list[ParsedDep],
+    overrides: dict[str, str] | None = None,
+) -> list[ResolvedPackage]:
+    """Resolve deps to ResolvedPackage list. overrides maps package name -> import_name."""
+    overrides = overrides or {}
+    results: list[ResolvedPackage] = []
+    unknown: list[ParsedDep] = []
+
+    for dep in deps:
+        name_lower = dep.name.lower()
+        if dep.name in overrides:
+            entry = KNOWN_PACKAGES.get(name_lower, {})
+            results.append(
+                ResolvedPackage(
+                    package=dep.name,
+                    import_name=overrides[dep.name],
+                    network_capable=bool(entry.get("network_capable", False)),
+                    category=entry.get("category"),
+                    source="manifest_override",
+                    transitive=dep.transitive,
+                )
+            )
+        elif name_lower in KNOWN_PACKAGES:
+            entry = KNOWN_PACKAGES[name_lower]
+            results.append(
+                ResolvedPackage(
+                    package=dep.name,
+                    import_name=str(entry["import_name"]),
+                    network_capable=bool(entry["network_capable"]),
+                    category=entry.get("category"),
+                    source="lookup",
+                    transitive=dep.transitive,
+                )
+            )
+        else:
+            unknown.append(dep)
+
+    if unknown:
+        try:
+            raw = _classify_with_claude([d.name for d in unknown])
+            classified = _parse_claude_response(raw)
+            classified_map: dict[str, dict[str, Any]] = {
+                item["package"]: item for item in classified if isinstance(item, dict)
+            }
+        except Exception as exc:
+            warnings.warn(
+                f"Claude classifier failed: {exc}. Treating unknown packages as non-network.",
+                stacklevel=2,
+            )
+            classified_map = {}
+
+        for dep in unknown:
+            item = classified_map.get(dep.name)
+            if item:
+                results.append(
+                    ResolvedPackage(
+                        package=dep.name,
+                        import_name=str(item.get("import_name", dep.name)),
+                        network_capable=bool(item.get("network_capable", False)),
+                        category=item.get("category"),
+                        source="claude",
+                        transitive=dep.transitive,
+                    )
+                )
+            else:
+                results.append(
+                    ResolvedPackage(
+                        package=dep.name,
+                        import_name=dep.name,
+                        network_capable=False,
+                        category=None,
+                        source="claude_failed",
+                        transitive=dep.transitive,
+                    )
+                )
+
+    return results
