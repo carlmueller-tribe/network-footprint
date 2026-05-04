@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tomllib
 import warnings
 from dataclasses import dataclass
@@ -132,15 +133,65 @@ def parse_cargo_toml(path: Path) -> list[ParsedDep]:
     return [ParsedDep(name=name, ecosystem="rust") for name in deps]
 
 
+_SKIP_DIRS = frozenset(
+    {
+        "node_modules",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".git",
+        "dist",
+        "build",
+        ".next",
+        ".nuxt",
+        "coverage",
+        ".mypy_cache",
+        ".ruff_cache",
+    }
+)
+
+
+def _find_manifests(repo_root: Path, filename: str) -> list[Path]:
+    """Find all manifest files with the given name under repo_root, skipping common build dirs."""
+    found: list[Path] = []
+    for path in repo_root.rglob(filename):
+        if any(part in _SKIP_DIRS for part in path.relative_to(repo_root).parts):
+            continue
+        found.append(path)
+    return found
+
+
 def parse_all(repo_root: Path) -> list[ParsedDep]:
+    """Parse all dependency manifests found anywhere under repo_root.
+
+    Searches subdirectories so monorepos (e.g. frontend/ + backend/) are covered.
+    Deduplicates by (name, ecosystem) to avoid double-counting shared packages.
+    """
+    seen: set[tuple[str, str]] = set()
     result: list[ParsedDep] = []
-    result.extend(parse_package_json(repo_root / "package.json"))
-    result.extend(parse_package_lock_json(repo_root / "package-lock.json"))
-    result.extend(parse_requirements_txt(repo_root / "requirements.txt"))
-    result.extend(parse_pyproject_toml(repo_root / "pyproject.toml"))
-    result.extend(parse_pipfile(repo_root / "Pipfile"))
-    result.extend(parse_go_mod(repo_root / "go.mod"))
-    result.extend(parse_cargo_toml(repo_root / "Cargo.toml"))
+
+    def add(deps: list[ParsedDep]) -> None:
+        for dep in deps:
+            key = (dep.name.lower(), dep.ecosystem)
+            if key not in seen:
+                seen.add(key)
+                result.append(dep)
+
+    for p in _find_manifests(repo_root, "package.json"):
+        add(parse_package_json(p))
+    for p in _find_manifests(repo_root, "package-lock.json"):
+        add(parse_package_lock_json(p))
+    for p in _find_manifests(repo_root, "requirements.txt"):
+        add(parse_requirements_txt(p))
+    for p in _find_manifests(repo_root, "pyproject.toml"):
+        add(parse_pyproject_toml(p))
+    for p in _find_manifests(repo_root, "Pipfile"):
+        add(parse_pipfile(p))
+    for p in _find_manifests(repo_root, "go.mod"):
+        add(parse_go_mod(p))
+    for p in _find_manifests(repo_root, "Cargo.toml"):
+        add(parse_cargo_toml(p))
+
     return result
 
 
@@ -319,6 +370,11 @@ Packages to classify:
 
 def _classify_with_claude(packages: list[str]) -> str:
     """Call Claude for package classification. Tries claude CLI subprocess first, SDK fallback."""
+    preview = ", ".join(packages[:5]) + ("..." if len(packages) > 5 else "")
+    print(
+        f"[footprint] asking Claude to classify {len(packages)} unknown package(s): {preview}",
+        file=sys.stderr,
+    )
     prompt = _CLASSIFIER_PROMPT.format(packages="\n".join(packages))
     if shutil.which("claude"):
         result = subprocess.run(
