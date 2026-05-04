@@ -6,22 +6,27 @@ from footprint.scanner import ScanResult
 
 
 def format_json(results: list[ScanResult]) -> str:
-    data = [
-        {
-            "file": r.file,
-            "categories": r.categories,
-            "matches": [
-                {
-                    "pattern": m.pattern,
-                    "category": m.category,
-                    "stack": m.stack,
-                    "line": m.line,
-                }
-                for m in r.matches
-            ],
-        }
-        for r in results
-    ]
+    data = []
+    for r in results:
+        matches = []
+        for m in r.matches:
+            entry: dict[str, object] = {
+                "pattern": m.pattern,
+                "category": m.category,
+                "stack": m.stack,
+                "line": m.line,
+                "source": m.source,
+            }
+            if m.transitive:
+                entry["transitive"] = True
+            matches.append(entry)
+        data.append(
+            {
+                "file": r.file,
+                "categories": r.categories,
+                "matches": matches,
+            }
+        )
     return json.dumps(data, indent=2)
 
 
