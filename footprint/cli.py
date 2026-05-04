@@ -38,6 +38,13 @@ def main() -> None:
     default=False,
     help="Exclude matches from transitive dependencies",
 )
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="Print scan details to stderr (does not affect stdout output)",
+)
 def scan(
     repo_path: str,
     output: str,
@@ -45,9 +52,15 @@ def scan(
     no_resolve: bool,
     min_confidence: float,
     no_transitive: bool,
+    verbose: bool,
 ) -> None:
     root = Path(repo_path).resolve()
     manifest = load_manifest(root, Path(manifest_path) if manifest_path else None)
+
+    if verbose:
+        click.echo(f"[footprint] repo: {root}", err=True)
+        click.echo(f"[footprint] stacks: {manifest.stacks}", err=True)
+        click.echo(f"[footprint] exclude patterns: {len(manifest.exclude)}", err=True)
 
     extra_patterns: list[PatternSpec] = []
     remove_patterns: list[str] = []
@@ -66,6 +79,13 @@ def scan(
             network_capable = [r for r in resolved if r.network_capable]
             for ecosystem in ("python", "node"):
                 extra_patterns.extend(generate_patterns(network_capable, ecosystem=ecosystem))
+            if verbose:
+                click.echo(f"[footprint] deps parsed: {len(deps)}", err=True)
+                lookup_n = sum(1 for r in resolved if r.source == "lookup")
+                claude_n = sum(1 for r in resolved if r.source == "claude")
+                click.echo(f"[footprint] resolved from lookup: {lookup_n}", err=True)
+                click.echo(f"[footprint] resolved via Claude: {claude_n}", err=True)
+                click.echo(f"[footprint] extra patterns generated: {len(extra_patterns)}", err=True)
         except Exception as exc:  # noqa: BLE001
             click.echo(f"Warning: dependency resolution failed: {exc}", err=True)
 
@@ -73,6 +93,11 @@ def scan(
         str(root), manifest, extra_patterns=extra_patterns, remove_patterns=remove_patterns
     )
     results = scanner.run()
+
+    if verbose:
+        total_matches = sum(len(r.matches) for r in results)
+        click.echo(f"[footprint] files matched: {len(results)}", err=True)
+        click.echo(f"[footprint] total matches: {total_matches}", err=True)
 
     if no_transitive or min_confidence > 0.0:
         for r in results:
@@ -86,7 +111,7 @@ def scan(
             r.categories = sorted({m.category for m in r.matches})
 
     if output == "json":
-        click.echo(format_json(results))
+        click.echo(format_json(results, repo=str(root)))
     elif output == "markdown":
         click.echo(format_markdown(results, repo_root=str(root)))
     else:

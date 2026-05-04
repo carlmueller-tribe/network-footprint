@@ -23,7 +23,7 @@ def test_json_includes_source_field() -> None:
         )
     ]
     output = json.loads(format_json(results))
-    assert output[0]["matches"][0]["source"] == "dependency_resolved"
+    assert output["results"][0]["matches"][0]["source"] == "dependency_resolved"
 
 
 def test_json_includes_transitive_field_when_true() -> None:
@@ -44,7 +44,7 @@ def test_json_includes_transitive_field_when_true() -> None:
         )
     ]
     output = json.loads(format_json(results))
-    assert output[0]["matches"][0]["transitive"] is True
+    assert output["results"][0]["matches"][0]["transitive"] is True
 
 
 def test_json_omits_transitive_when_false() -> None:
@@ -64,5 +64,5 @@ def test_json_omits_transitive_when_false() -> None:
         )
     ]
     output = json.loads(format_json(results))
-    match = output[0]["matches"][0]
+    match = output["results"][0]["matches"][0]
     assert "transitive" not in match

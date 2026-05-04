@@ -36,26 +36,29 @@ def _make_results() -> list[ScanResult]:
 def test_format_json_is_valid_json() -> None:
     output = format_json(_make_results())
     data = json.loads(output)
-    assert isinstance(data, list)
+    assert isinstance(data, dict)
+    assert "results" in data
 
 
 def test_format_json_structure() -> None:
     output = format_json(_make_results())
     data = json.loads(output)
-    assert len(data) == 2
-    assert data[0]["file"] == "src/services/api.ts"
-    assert data[0]["categories"] == ["network_call"]
-    assert len(data[0]["matches"]) == 1
-    assert data[0]["matches"][0]["line"] == 1
-    assert data[0]["matches"][0]["pattern"] == "import.*axios"
-    assert data[0]["matches"][0]["category"] == "network_call"
-    assert data[0]["matches"][0]["stack"] == "node"
+    results = data["results"]
+    assert len(results) == 2
+    assert results[0]["file"] == "src/services/api.ts"
+    assert results[0]["categories"] == ["network_call"]
+    assert len(results[0]["matches"]) == 1
+    assert results[0]["matches"][0]["line"] == 1
+    assert results[0]["matches"][0]["pattern"] == "import.*axios"
+    assert results[0]["matches"][0]["category"] == "network_call"
+    assert results[0]["matches"][0]["stack"] == "node"
     # pattern with backslash round-trips correctly through JSON serialisation
-    assert data[1]["matches"][0]["pattern"] == r"(app|router)\.(get|post|put|patch|delete|use)\("
+    assert results[1]["matches"][0]["pattern"] == r"(app|router)\.(get|post|put|patch|delete|use)\("
 
 
 def test_format_json_empty_returns_empty_array() -> None:
-    assert format_json([]) == "[]"
+    data = json.loads(format_json([]))
+    assert data["results"] == []
 
 
 def test_format_flat_one_file_per_line() -> None:

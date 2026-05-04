@@ -1,12 +1,29 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC
 
 from footprint.scanner import ScanResult
 
 
-def format_json(results: list[ScanResult]) -> str:
-    data = []
+def format_json(results: list[ScanResult], repo: str = "") -> str:
+    from datetime import datetime  # noqa: PLC0415
+
+    all_matches = [m for r in results for m in r.matches]
+
+    by_category: dict[str, int] = {}
+    by_stack: dict[str, int] = {}
+    for m in all_matches:
+        by_category[m.category] = by_category.get(m.category, 0) + 1
+        by_stack[m.stack] = by_stack.get(m.stack, 0) + 1
+
+    low_conf = sum(1 for m in all_matches if m.confidence < 0.5)
+    transitive = sum(1 for m in all_matches if m.transitive)
+    from_defaults = sum(1 for m in all_matches if m.source == "default")
+    from_resolved = sum(1 for m in all_matches if m.source == "dependency_resolved")
+    from_custom = sum(1 for m in all_matches if m.source == "custom")
+
+    results_data = []
     for r in results:
         matches = []
         for m in r.matches:
@@ -18,23 +35,37 @@ def format_json(results: list[ScanResult]) -> str:
                 "source": m.source,
                 "confidence": round(m.confidence, 2),
             }
-            if m.transitive:
-                entry["transitive"] = True
             if m.in_comment:
                 entry["in_comment"] = True
             if m.in_string_literal:
                 entry["in_string_literal"] = True
             if m.context:
                 entry["context"] = m.context
+            if m.transitive:
+                entry["transitive"] = True
             matches.append(entry)
-        data.append(
+        results_data.append(
             {
                 "file": r.file,
                 "categories": r.categories,
                 "matches": matches,
             }
         )
-    return json.dumps(data, indent=2)
+
+    summary: dict[str, object] = {
+        "repo": repo,
+        "scanned_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "total_files_matched": len(results),
+        "by_category": by_category,
+        "by_stack": by_stack,
+        "low_confidence_matches": low_conf,
+        "transitive_matches": transitive,
+        "patterns_from_defaults": from_defaults,
+        "patterns_from_dependency_resolution": from_resolved,
+        "patterns_from_custom": from_custom,
+    }
+
+    return json.dumps({"results": results_data, "summary": summary}, indent=2)
 
 
 def format_flat(results: list[ScanResult]) -> str:

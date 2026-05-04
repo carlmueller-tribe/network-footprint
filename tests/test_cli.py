@@ -13,8 +13,9 @@ def test_scan_json_output_is_valid() -> None:
     result = runner.invoke(main, ["scan", str(FIXTURES / "node-repo"), "--output", "json"])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    assert isinstance(data, list)
-    assert len(data) > 0
+    assert isinstance(data, dict)
+    assert "results" in data
+    assert len(data["results"]) > 0
 
 
 def test_scan_flat_output_one_per_line() -> None:
@@ -57,7 +58,7 @@ def test_scan_python_repo_categories() -> None:
     result = runner.invoke(main, ["scan", str(FIXTURES / "python-repo")])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    routes_file = next((r for r in data if "routes.py" in r["file"]), None)
+    routes_file = next((r for r in data["results"] if "routes.py" in r["file"]), None)
     assert routes_file is not None
     assert "route_definition" in routes_file["categories"]
     assert "network_call" in routes_file["categories"]
