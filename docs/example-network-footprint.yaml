@@ -1,0 +1,126 @@
+# network-footprint.yaml — example manifest
+#
+# Place this file at the root of your repository.
+# footprint scan auto-discovers it; or pass --manifest <path> to use a different location.
+#
+# All sections are optional. Without a manifest the tool uses sensible defaults.
+
+# ─── Stacks ────────────────────────────────────────────────────────────────────
+# Which language/platform stacks to scan for. Valid values: node, python, devops.
+# Omit a stack to skip scanning files for it entirely.
+stacks:
+  - node
+  - python
+  - devops
+
+# ─── Exclude ───────────────────────────────────────────────────────────────────
+# Paths (or glob patterns) to skip entirely during scanning.
+# Matched against every path component, so "node_modules" catches any depth.
+#
+# Rule of thumb:
+#   - Always exclude dependency install dirs (node_modules, .venv)
+#   - Exclude build output (dist, .next, build) — compiled code adds noise
+#   - Exclude generated lockfiles (uv.lock, mise.lock) — not app code
+#   - Keep test files unless you want to suppress context="test" matches
+#
+exclude:
+  # ── Dependency trees ────────────────────────────────────────────────────────
+  - node_modules       # npm/pnpm/yarn packages
+  - .venv              # Python virtual environment
+  - venv               # alternate venv name
+  - uv.lock            # uv lockfile (binary, not app code)
+  - mise.lock          # mise lockfile
+
+  # ── Build output ────────────────────────────────────────────────────────────
+  - dist
+  - build
+  - .next              # Next.js build
+  - .nuxt              # Nuxt build
+  - out                # common static export dir
+
+  # ── Python cache ────────────────────────────────────────────────────────────
+  - __pycache__
+  - "*.pyc"
+  - .mypy_cache
+  - .ruff_cache
+
+  # ── Generated / vendored files ───────────────────────────────────────────────
+  - manifests          # Kubernetes generated manifests (not app code)
+  - "docs/design"      # design assets, diagrams
+
+  # ── Uncomment to exclude test files entirely ─────────────────────────────────
+  # By default test files ARE scanned but flagged context="test" and get
+  # reduced confidence. They also contribute coverage evidence for routes.
+  # Uncomment below only if you want to suppress test file matches completely.
+  #
+  # - tests
+  # - "__tests__"
+  # - "*.test.ts"
+  # - "*.spec.ts"
+  # - "*.spec.py"
+
+# ─── Overrides ─────────────────────────────────────────────────────────────────
+overrides:
+
+  # ── Import name overrides ────────────────────────────────────────────────────
+  # Tell footprint how to recognise internal or renamed packages that the
+  # dependency classifier won't know about.
+  #
+  # Use this when your repo has a private npm/PyPI package that wraps an HTTP
+  # client, or when a package is imported under a name that differs from its
+  # registry name (e.g. "PIL" for "pillow").
+  #
+  imports:
+    # Internal HTTP client published to your private registry
+    - package: "@acme/http-client"
+      imports_as: "@acme/http-client"
+
+    # Internal analytics wrapper that eventually calls PostHog
+    - package: "@acme/analytics"
+      imports_as: "@acme/analytics"
+
+    # Python package installed as "acme_requests" but imported as "acme_http"
+    - package: "acme-requests"
+      imports_as: "acme_http"
+
+  # ── Pattern overrides ────────────────────────────────────────────────────────
+  patterns:
+
+    # add: inject custom regex patterns not in the built-in set.
+    # Each entry requires: pattern (regex), category, stack.
+    # category: "network_call" | "route_definition" | "telemetry" | "devops"
+    # stack:    "node" | "python" | "devops"
+    #
+    add:
+      # Match a custom RPC client unique to this codebase
+      - pattern: "AcmeRpcClient"
+        category: network_call
+        stack: python
+
+      # Match an internal gRPC stub import
+      - pattern: "from protos\\."
+        category: network_call
+        stack: python
+
+      # Match a proprietary feature-flag SDK
+      - pattern: "from acme_flags import"
+        category: telemetry
+        stack: python
+
+      # Match a custom internal fetch wrapper
+      - pattern: "apiFetch\\("
+        category: network_call
+        stack: node
+
+    # remove: suppress built-in patterns that produce false positives in this repo.
+    # Each entry is the exact regex string from the built-in pattern set.
+    # Run `footprint scan --output json` to find pattern strings in match output.
+    #
+    remove:
+      # Suppress the bare `fetch(` pattern — this repo wraps it and the raw
+      # pattern fires on mock calls in tests generating too much noise.
+      - "\\bfetch\\("
+
+      # Suppress urllib imports — only used for internal admin scripts, not app code.
+      - "from urllib"
+      - "import urllib"

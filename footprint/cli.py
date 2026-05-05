@@ -83,9 +83,24 @@ def scan(
             if verbose:
                 click.echo(f"[footprint] deps parsed: {len(deps)}", err=True)
                 lookup_n = sum(1 for r in resolved if r.source == "lookup")
-                claude_n = sum(1 for r in resolved if r.source == "claude")
+                claude_resolved = [r for r in resolved if r.source == "claude"]
+                unknown_n = sum(1 for r in resolved if r.source == "unknown_package")
                 click.echo(f"[footprint] resolved from lookup: {lookup_n}", err=True)
-                click.echo(f"[footprint] resolved via Claude: {claude_n}", err=True)
+                if claude_resolved:
+                    click.echo(f"[footprint] resolved via Claude: {len(claude_resolved)}", err=True)
+                    for cr in claude_resolved:
+                        tag = cr.category or "not network-capable"
+                        click.echo(f"[footprint]   {cr.package} → {tag}", err=True)
+                elif unknown_n:
+                    click.echo(
+                        f"[footprint] Claude unavailable — {unknown_n} pkg(s) treated as unknown",
+                        err=True,
+                    )
+                else:
+                    click.echo(
+                        "[footprint] Claude not needed — all packages resolved from lookup",
+                        err=True,
+                    )
                 click.echo(f"[footprint] extra patterns generated: {len(extra_patterns)}", err=True)
         except Exception as exc:  # noqa: BLE001
             click.echo(f"Warning: dependency resolution failed: {exc}", err=True)

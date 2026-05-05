@@ -5,12 +5,14 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tomllib
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from footprint.known_packages import KNOWN_PACKAGES, lookup_prefix
 from footprint.patterns import PatternSpec
 
 
@@ -132,15 +134,68 @@ def parse_cargo_toml(path: Path) -> list[ParsedDep]:
     return [ParsedDep(name=name, ecosystem="rust") for name in deps]
 
 
+_SKIP_DIRS = frozenset(
+    {
+        "node_modules",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".git",
+        "dist",
+        "build",
+        ".next",
+        ".nuxt",
+        "coverage",
+        ".mypy_cache",
+        ".ruff_cache",
+    }
+)
+
+
+def _find_manifests(repo_root: Path, filename: str) -> list[Path]:
+    """Find all manifest files with the given name under repo_root, skipping build/dep dirs.
+
+    Uses os.walk with in-place dir pruning so node_modules/.venv trees are never traversed.
+    """
+    found: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(repo_root):
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+        if filename in filenames:
+            found.append(Path(dirpath) / filename)
+    return found
+
+
 def parse_all(repo_root: Path) -> list[ParsedDep]:
+    """Parse all dependency manifests found anywhere under repo_root.
+
+    Searches subdirectories so monorepos (e.g. frontend/ + backend/) are covered.
+    Deduplicates by (name, ecosystem) to avoid double-counting shared packages.
+    """
+    seen: set[tuple[str, str]] = set()
     result: list[ParsedDep] = []
-    result.extend(parse_package_json(repo_root / "package.json"))
-    result.extend(parse_package_lock_json(repo_root / "package-lock.json"))
-    result.extend(parse_requirements_txt(repo_root / "requirements.txt"))
-    result.extend(parse_pyproject_toml(repo_root / "pyproject.toml"))
-    result.extend(parse_pipfile(repo_root / "Pipfile"))
-    result.extend(parse_go_mod(repo_root / "go.mod"))
-    result.extend(parse_cargo_toml(repo_root / "Cargo.toml"))
+
+    def add(deps: list[ParsedDep]) -> None:
+        for dep in deps:
+            key = (dep.name.lower(), dep.ecosystem)
+            if key not in seen:
+                seen.add(key)
+                result.append(dep)
+
+    for p in _find_manifests(repo_root, "package.json"):
+        add(parse_package_json(p))
+    for p in _find_manifests(repo_root, "package-lock.json"):
+        add(parse_package_lock_json(p))
+    for p in _find_manifests(repo_root, "requirements.txt"):
+        add(parse_requirements_txt(p))
+    for p in _find_manifests(repo_root, "pyproject.toml"):
+        add(parse_pyproject_toml(p))
+    for p in _find_manifests(repo_root, "Pipfile"):
+        add(parse_pipfile(p))
+    for p in _find_manifests(repo_root, "go.mod"):
+        add(parse_go_mod(p))
+    for p in _find_manifests(repo_root, "Cargo.toml"):
+        add(parse_cargo_toml(p))
+
     return result
 
 
@@ -153,138 +208,6 @@ class ResolvedPackage:
     source: str  # "lookup" | "claude" | "manifest_override" | "unknown_package"
     transitive: bool = False
 
-
-KNOWN_PACKAGES: dict[str, dict[str, Any]] = {
-    # Node
-    "axios": {"network_capable": True, "import_name": "axios", "category": "network_call"},
-    "node-fetch": {
-        "network_capable": True,
-        "import_name": "node-fetch",
-        "category": "network_call",
-    },
-    "got": {"network_capable": True, "import_name": "got", "category": "network_call"},
-    "superagent": {
-        "network_capable": True,
-        "import_name": "superagent",
-        "category": "network_call",
-    },
-    "ky": {"network_capable": True, "import_name": "ky", "category": "network_call"},
-    "undici": {"network_capable": True, "import_name": "undici", "category": "network_call"},
-    "ws": {"network_capable": True, "import_name": "ws", "category": "network_call"},
-    "socket.io-client": {
-        "network_capable": True,
-        "import_name": "socket.io-client",
-        "category": "network_call",
-    },
-    "@apollo/client": {
-        "network_capable": True,
-        "import_name": "@apollo/client",
-        "category": "network_call",
-    },
-    "graphql-request": {
-        "network_capable": True,
-        "import_name": "graphql-request",
-        "category": "network_call",
-    },
-    "express": {"network_capable": True, "import_name": "express", "category": "route_definition"},
-    "fastify": {"network_capable": True, "import_name": "fastify", "category": "route_definition"},
-    "koa": {"network_capable": True, "import_name": "koa", "category": "route_definition"},
-    # Python
-    "requests": {"network_capable": True, "import_name": "requests", "category": "network_call"},
-    "httpx": {"network_capable": True, "import_name": "httpx", "category": "network_call"},
-    "aiohttp": {"network_capable": True, "import_name": "aiohttp", "category": "network_call"},
-    "boto3": {"network_capable": True, "import_name": "boto3", "category": "network_call"},
-    "botocore": {"network_capable": True, "import_name": "botocore", "category": "network_call"},
-    "openai": {"network_capable": True, "import_name": "openai", "category": "network_call"},
-    "anthropic": {"network_capable": True, "import_name": "anthropic", "category": "network_call"},
-    "fastapi": {"network_capable": True, "import_name": "fastapi", "category": "route_definition"},
-    "flask": {"network_capable": True, "import_name": "flask", "category": "route_definition"},
-    "django": {"network_capable": True, "import_name": "django", "category": "route_definition"},
-    "pillow": {"network_capable": False, "import_name": "PIL", "category": None},
-    "opencv-python": {"network_capable": False, "import_name": "cv2", "category": None},
-    "python-dotenv": {"network_capable": False, "import_name": "dotenv", "category": None},
-    "numpy": {"network_capable": False, "import_name": "numpy", "category": None},
-    "pandas": {"network_capable": False, "import_name": "pandas", "category": None},
-    "pydantic": {"network_capable": False, "import_name": "pydantic", "category": None},
-    # Telemetry / observability — background calls, not core function
-    "sentry-sdk": {"network_capable": True, "import_name": "sentry_sdk", "category": "telemetry"},
-    "datadog": {"network_capable": True, "import_name": "datadog", "category": "telemetry"},
-    "ddtrace": {"network_capable": True, "import_name": "ddtrace", "category": "telemetry"},
-    "opentelemetry-sdk": {
-        "network_capable": True,
-        "import_name": "opentelemetry",
-        "category": "telemetry",
-    },
-    "opentelemetry-api": {
-        "network_capable": True,
-        "import_name": "opentelemetry",
-        "category": "telemetry",
-    },
-    "segment-analytics-python": {
-        "network_capable": True,
-        "import_name": "segment",
-        "category": "telemetry",
-    },
-    "analytics-python": {
-        "network_capable": True,
-        "import_name": "analytics",
-        "category": "telemetry",
-    },
-    "posthog": {"network_capable": True, "import_name": "posthog", "category": "telemetry"},
-    "mixpanel": {"network_capable": True, "import_name": "mixpanel", "category": "telemetry"},
-    "amplitude": {"network_capable": True, "import_name": "amplitude", "category": "telemetry"},
-    "newrelic": {"network_capable": True, "import_name": "newrelic", "category": "telemetry"},
-    "rollbar": {"network_capable": True, "import_name": "rollbar", "category": "telemetry"},
-    "bugsnag": {"network_capable": True, "import_name": "bugsnag", "category": "telemetry"},
-    "honeybadger": {
-        "network_capable": True,
-        "import_name": "honeybadger",
-        "category": "telemetry",
-    },
-    "prometheus-client": {
-        "network_capable": True,
-        "import_name": "prometheus_client",
-        "category": "telemetry",
-    },
-    # Node telemetry
-    "@sentry/node": {
-        "network_capable": True,
-        "import_name": "@sentry/node",
-        "category": "telemetry",
-    },
-    "@sentry/browser": {
-        "network_capable": True,
-        "import_name": "@sentry/browser",
-        "category": "telemetry",
-    },
-    "@datadog/datadog-ci": {
-        "network_capable": True,
-        "import_name": "@datadog/datadog-ci",
-        "category": "telemetry",
-    },
-    "@opentelemetry/sdk-node": {
-        "network_capable": True,
-        "import_name": "@opentelemetry/sdk-node",
-        "category": "telemetry",
-    },
-    "@segment/analytics-node": {
-        "network_capable": True,
-        "import_name": "@segment/analytics-node",
-        "category": "telemetry",
-    },
-    "posthog-node": {
-        "network_capable": True,
-        "import_name": "posthog-node",
-        "category": "telemetry",
-    },
-    "mixpanel-browser": {
-        "network_capable": True,
-        "import_name": "mixpanel-browser",
-        "category": "telemetry",
-    },
-    "pino": {"network_capable": False, "import_name": "pino", "category": None},
-    "winston": {"network_capable": False, "import_name": "winston", "category": None},
-}
 
 _CLASSIFIER_PROMPT = """\
 You are a code analysis assistant. Given a list of package names, classify each one.
@@ -317,26 +240,58 @@ Packages to classify:
 """
 
 
+_BATCH_SIZE = 25
+_BATCH_TIMEOUT = 30  # seconds per batch — 25 packages should complete well within this
+
+
 def _classify_with_claude(packages: list[str]) -> str:
-    """Call Claude for package classification. Tries claude CLI subprocess first, SDK fallback."""
+    """Classify one batch of packages via Claude CLI or SDK."""
     prompt = _CLASSIFIER_PROMPT.format(packages="\n".join(packages))
     if shutil.which("claude"):
+        print("[footprint]   → calling Claude CLI...", file=sys.stderr)
         result = subprocess.run(
             ["claude", "-p", prompt],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=_BATCH_TIMEOUT,
         )
         if result.returncode == 0:
             return result.stdout.strip()
         raise RuntimeError(f"claude CLI failed: {result.stderr.strip()}")
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if api_key:
+        print("[footprint]   → calling Claude SDK...", file=sys.stderr)
         return _classify_with_sdk(packages)
     raise RuntimeError(
         "No Claude authentication available. "
         "Install Claude Code (claude.ai/code) or set ANTHROPIC_API_KEY."
     )
+
+
+def _classify_packages(packages: list[str]) -> dict[str, dict[str, Any]]:
+    """Classify packages in batches, merging results. Returns map of package -> classification."""
+    total = len(packages)
+    batches = [packages[i : i + _BATCH_SIZE] for i in range(0, total, _BATCH_SIZE)]
+    preview = ", ".join(packages[:5]) + ("..." if total > 5 else "")
+    n_batches = len(batches)
+    batch_info = f" ({n_batches} batch{'es' if n_batches > 1 else ''})" if n_batches > 1 else ""
+    print(
+        f"[footprint] asking Claude to classify {total} unknown package(s){batch_info}: {preview}",
+        file=sys.stderr,
+    )
+    classified_map: dict[str, dict[str, Any]] = {}
+    for i, batch in enumerate(batches, 1):
+        if n_batches > 1:
+            print(f"[footprint]   batch {i}/{n_batches}: {', '.join(batch)}", file=sys.stderr)
+        raw = _classify_with_claude(batch)
+        for item in _parse_claude_response(raw):
+            if isinstance(item, dict) and "package" in item:
+                classified_map[item["package"]] = item
+                tag = item.get("category") or (
+                    "network_call" if item.get("network_capable") else "not network-capable"
+                )  # noqa: E501
+                print(f"[footprint]   {item['package']} → {tag}", file=sys.stderr)
+    return classified_map
 
 
 def _classify_with_sdk(packages: list[str]) -> str:
@@ -354,6 +309,10 @@ def _classify_with_sdk(packages: list[str]) -> str:
     content = msg.content[0]
     if content.type != "text":
         raise RuntimeError("Unexpected response type from Claude SDK")
+    print(
+        f"[footprint] Claude SDK: {msg.usage.input_tokens} in / {msg.usage.output_tokens} out",  # noqa: E501
+        file=sys.stderr,
+    )
     return str(content.text)
 
 
@@ -409,16 +368,30 @@ def resolve_packages(
                     transitive=dep.transitive,
                 )
             )
+        elif (prefix_entry := lookup_prefix(dep.name)) is not None:
+            results.append(
+                ResolvedPackage(
+                    package=dep.name,
+                    import_name=str(prefix_entry["import_name"]),
+                    network_capable=bool(prefix_entry["network_capable"]),
+                    category=prefix_entry.get("category"),
+                    source="lookup",
+                    transitive=dep.transitive,
+                )
+            )
         else:
             unknown.append(dep)
 
-    if unknown:
+    # Only classify direct deps via Claude. Transitive deps not in the lookup table are
+    # silently skipped — lockfiles contain hundreds of sub-dependencies that would
+    # overwhelm Claude and generate useless patterns.
+    direct_unknown = [d for d in unknown if not d.transitive]
+
+    if direct_unknown:
         try:
-            raw = _classify_with_claude([d.name for d in unknown])
-            classified = _parse_claude_response(raw)
-            classified_map: dict[str, dict[str, Any]] = {
-                item["package"]: item for item in classified if isinstance(item, dict)
-            }
+            classified_map: dict[str, dict[str, Any]] = _classify_packages(
+                [d.name for d in direct_unknown]
+            )
         except Exception as exc:
             warnings.warn(
                 f"Claude classifier failed: {exc}. Treating unknown packages as non-network.",
@@ -426,7 +399,7 @@ def resolve_packages(
             )
             classified_map = {}
 
-        for dep in unknown:
+        for dep in direct_unknown:
             item = classified_map.get(dep.name)
             if item:
                 results.append(
