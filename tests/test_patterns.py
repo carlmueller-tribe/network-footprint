@@ -2,7 +2,13 @@ import re
 
 import pytest
 
-from footprint.patterns import ALL_PATTERNS, DEVOPS_PATTERNS, NODE_PATTERNS, PYTHON_PATTERNS
+from footprint.patterns import (
+    ALL_PATTERNS,
+    DEVOPS_PATTERNS,
+    NODE_PATTERNS,
+    PYTHON_PATTERNS,
+    TELEMETRY_PATTERNS,
+)
 
 
 @pytest.mark.parametrize(
@@ -128,5 +134,12 @@ def test_each_pattern_has_required_keys() -> None:
         assert "pattern" in p
         assert "category" in p
         assert "stack" in p
-        assert p["category"] in ("route_definition", "network_call", "devops")
+        assert p["category"] in ("route_definition", "network_call", "devops", "telemetry")
         assert p["stack"] in ("node", "python", "devops")
+
+
+def test_telemetry_patterns_exist() -> None:
+    assert len(TELEMETRY_PATTERNS) > 0
+    for p in TELEMETRY_PATTERNS:
+        assert p["category"] == "telemetry"
+        assert p["stack"] in ("node", "python")

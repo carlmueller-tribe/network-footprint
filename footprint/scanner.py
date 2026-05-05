@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
 
+from footprint.heuristics import is_comment, is_string_literal, is_test_file, reclassify_by_url
 from footprint.manifest import ManifestConfig
 from footprint.patterns import ALL_PATTERNS, PatternSpec
 
@@ -32,6 +33,10 @@ class Match:
     source: str = "default"
     transitive: bool = False
     line_content: str = ""
+    in_comment: bool = False
+    in_string_literal: bool = False
+    context: str = ""  # "test" | ""
+    confidence: float = 0.0
 
 
 @dataclass
@@ -39,9 +44,12 @@ class ScanResult:
     file: str
     categories: list[str]
     matches: list[Match]
+    coverage: str = ""  # "likely_active" | "no_test_coverage" | ""
 
 
 class Scanner:
+    _BASE_CONFIDENCE: float = 0.7
+
     def __init__(
         self,
         repo_root: str,
@@ -63,6 +71,26 @@ class Scanner:
         ]
         self._patterns: list[PatternSpec] = base + injected
 
+    def _score_confidence(self, matches: list[Match]) -> None:
+        """Score confidence in-place. Called after _scan_file."""
+        for i, m in enumerate(matches):
+            score = self._BASE_CONFIDENCE
+            if m.in_comment:
+                score -= 0.4
+            if m.in_string_literal:
+                score -= 0.3
+            if m.context == "test":
+                score -= 0.1
+            if m.category == "route_definition":
+                score += 0.2
+            if m.source == "dependency_resolved":
+                score += 0.1
+            if m.source == "unknown_package":
+                score -= 0.3
+            # bonus for additional matches in same file, capped at +0.3
+            score += min(i, 3) * 0.1
+            m.confidence = max(0.0, min(1.0, score))
+
     def run(self) -> list[ScanResult]:
         results: list[ScanResult] = []
         for path in sorted(self._root.rglob("*")):
@@ -75,6 +103,7 @@ class Scanner:
                 continue
             matches = self._scan_file(path)
             if matches:
+                self._score_confidence(matches)
                 results.append(
                     ScanResult(
                         file=str(rel),
@@ -115,6 +144,8 @@ class Scanner:
 
     def _scan_file(self, path: Path) -> list[Match]:
         is_devops = self._is_devops_file(path)
+        rel_path = str(path.relative_to(self._root))
+        context = "test" if is_test_file(rel_path) else ""
         try:
             lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
         except OSError:
@@ -125,19 +156,25 @@ class Scanner:
             for p in self._patterns:
                 if p["stack"] == "devops" and not is_devops:
                     continue
-                if re.search(p["pattern"], line):
+                re_match = re.search(p["pattern"], line)
+                if re_match is not None:
                     key = (p["pattern"], lineno)
                     if key not in seen:
                         seen.add(key)
+                        raw_category = p["category"]
+                        category = reclassify_by_url(line, raw_category)
                         matches.append(
                             Match(
                                 pattern=p["pattern"],
-                                category=p["category"],
+                                category=category,
                                 stack=p["stack"],
                                 line=lineno,
                                 source=str(p.get("source", "default")),
                                 transitive=bool(p.get("transitive", False)),
                                 line_content=line,
+                                in_comment=is_comment(line, p["stack"]),
+                                in_string_literal=is_string_literal(line, re_match.start()),
+                                context=context,
                             )
                         )
         return matches

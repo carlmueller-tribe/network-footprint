@@ -1,12 +1,29 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC
 
 from footprint.scanner import ScanResult
 
 
-def format_json(results: list[ScanResult]) -> str:
-    data = []
+def format_json(results: list[ScanResult], repo: str = "") -> str:
+    from datetime import datetime  # noqa: PLC0415
+
+    all_matches = [m for r in results for m in r.matches]
+
+    by_category: dict[str, int] = {}
+    by_stack: dict[str, int] = {}
+    for m in all_matches:
+        by_category[m.category] = by_category.get(m.category, 0) + 1
+        by_stack[m.stack] = by_stack.get(m.stack, 0) + 1
+
+    low_conf = sum(1 for m in all_matches if m.confidence < 0.5)
+    transitive = sum(1 for m in all_matches if m.transitive)
+    from_defaults = sum(1 for m in all_matches if m.source == "default")
+    from_resolved = sum(1 for m in all_matches if m.source == "dependency_resolved")
+    from_custom = sum(1 for m in all_matches if m.source == "custom")
+
+    results_data = []
     for r in results:
         matches = []
         for m in r.matches:
@@ -16,18 +33,40 @@ def format_json(results: list[ScanResult]) -> str:
                 "stack": m.stack,
                 "line": m.line,
                 "source": m.source,
+                "confidence": round(m.confidence, 2),
             }
+            if m.in_comment:
+                entry["in_comment"] = True
+            if m.in_string_literal:
+                entry["in_string_literal"] = True
+            if m.context:
+                entry["context"] = m.context
             if m.transitive:
                 entry["transitive"] = True
             matches.append(entry)
-        data.append(
-            {
-                "file": r.file,
-                "categories": r.categories,
-                "matches": matches,
-            }
-        )
-    return json.dumps(data, indent=2)
+        result_entry: dict[str, object] = {
+            "file": r.file,
+            "categories": r.categories,
+            "matches": matches,
+        }
+        if r.coverage:
+            result_entry["coverage"] = r.coverage
+        results_data.append(result_entry)
+
+    summary: dict[str, object] = {
+        "repo": repo,
+        "scanned_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "total_files_matched": len(results),
+        "by_category": by_category,
+        "by_stack": by_stack,
+        "low_confidence_matches": low_conf,
+        "transitive_matches": transitive,
+        "patterns_from_defaults": from_defaults,
+        "patterns_from_dependency_resolution": from_resolved,
+        "patterns_from_custom": from_custom,
+    }
+
+    return json.dumps({"results": results_data, "summary": summary}, indent=2)
 
 
 def format_flat(results: list[ScanResult]) -> str:
@@ -45,11 +84,21 @@ def format_markdown(results: list[ScanResult], repo_root: str = "") -> str:
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")  # noqa: UP017
     lines.append("")
 
+    lines.append(
+        "> **Confidence** — likelihood the match is a real network call or route, "
+        "not noise (comment, string literal, test artifact, or unverified dependency).  "
+    )
+    lines.append(
+        "> `0.9–1.0` certain · `0.7–0.8` likely · `0.5–0.6` uncertain · `< 0.5` probable noise"
+    )
+    lines.append("")
+
     # Group results by category
-    category_order = ["route_definition", "network_call", "devops"]
+    category_order = ["route_definition", "network_call", "telemetry", "devops"]
     category_labels = {
         "route_definition": "Route Definitions",
         "network_call": "Network Calls",
+        "telemetry": "Telemetry & Observability",
         "devops": "DevOps",
     }
 
@@ -80,14 +129,20 @@ def format_markdown(results: list[ScanResult], repo_root: str = "") -> str:
         for result, matches in cat_results:
             lines.append(f"### `{result.file}`")
             lines.append("")
-            lines.append("| Line | Snippet |")
-            lines.append("|------|---------|")
+            if result.coverage == "likely_active":
+                lines.append("**Coverage:** ✓ appears in test calls")
+                lines.append("")
+            elif result.coverage == "no_test_coverage":
+                lines.append("**Coverage:** ⚠ no test coverage found")
+                lines.append("")
+            lines.append("| Line | Confidence | Snippet |")
+            lines.append("|------|------------|---------|")
             for m in matches:
                 snippet = m.line_content.strip()
                 # Escape pipe chars in snippet so table doesn't break
                 snippet = snippet.replace("|", "\\|")
                 badge = " *(transitive)*" if m.transitive else ""
-                lines.append(f"| {m.line} | `{snippet}`{badge} |")
+                lines.append(f"| {m.line} | {m.confidence:.2f} | `{snippet}`{badge} |")
             lines.append("")
 
         lines.append("---")

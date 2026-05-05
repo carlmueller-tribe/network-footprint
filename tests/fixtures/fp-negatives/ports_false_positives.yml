@@ -1,0 +1,7 @@
+# CI config — ports: here is NOT networking
+build:
+  supported_ports:
+    - grpc
+    - http
+settings:
+  transports: [http2, h3]
