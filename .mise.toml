@@ -1,0 +1,19 @@
+[tools]
+python = "3.11"
+trivy = "0.69.3"
+ripgrep = "14.1.1"
+
+[env]
+UV_PYTHON = "3.11"
+
+[tasks.check]
+depends = ["trivy:scan"]
+run = [
+  "uv run ruff check footprint/ tests/",
+  "uv run ruff format --check footprint/ tests/",
+  "uv run mypy footprint/",
+  "uv run pytest",
+]
+
+[tasks."trivy:scan"]
+run = "trivy fs --exit-code 1 --severity HIGH,CRITICAL uv.lock"
