@@ -83,7 +83,7 @@ def test_match_has_required_fields() -> None:
     assert results, "Need at least one result to test Match fields"
     match = results[0].matches[0]
     assert isinstance(match.pattern, str)
-    assert match.category in ("route_definition", "network_call", "devops")
+    assert match.category in ("route_definition", "network_call", "devops", "telemetry")
     assert match.stack in ("node", "python", "devops")
     assert isinstance(match.line, int)
     assert match.line >= 1
