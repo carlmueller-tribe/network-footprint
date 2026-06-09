@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from fnmatch import fnmatch
@@ -93,24 +94,27 @@ class Scanner:
 
     def run(self) -> list[ScanResult]:
         results: list[ScanResult] = []
-        for path in sorted(self._root.rglob("*")):
-            if path.is_dir():
-                continue
-            rel = path.relative_to(self._root)
-            if self._is_excluded(rel):
-                continue
-            if not self._should_scan(path):
-                continue
-            matches = self._scan_file(path)
-            if matches:
-                self._score_confidence(matches)
-                results.append(
-                    ScanResult(
-                        file=str(rel),
-                        categories=sorted({m.category for m in matches}),
-                        matches=matches,
+        for dirpath, dirnames, filenames in os.walk(self._root):
+            rel_dir = Path(dirpath).relative_to(self._root)
+            # Prune excluded dirs in-place so os.walk never descends into them
+            dirnames[:] = sorted(d for d in dirnames if not self._is_excluded(rel_dir / d))
+            for filename in sorted(filenames):
+                rel = rel_dir / filename
+                if self._is_excluded(rel):
+                    continue
+                path = Path(dirpath) / filename
+                if not self._should_scan(path):
+                    continue
+                matches = self._scan_file(path)
+                if matches:
+                    self._score_confidence(matches)
+                    results.append(
+                        ScanResult(
+                            file=str(rel),
+                            categories=sorted({m.category for m in matches}),
+                            matches=matches,
+                        )
                     )
-                )
         return results
 
     def _is_excluded(self, rel: Path) -> bool:
