@@ -1,0 +1,5 @@
+requests==2.31.0
+httpx>=0.24.0
+pillow==10.0.0
+# comment line
+numpy==1.24.0

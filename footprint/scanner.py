@@ -29,6 +29,9 @@ class Match:
     category: str
     stack: str
     line: int
+    source: str = "default"
+    transitive: bool = False
+    line_content: str = ""
 
 
 @dataclass
@@ -39,13 +42,26 @@ class ScanResult:
 
 
 class Scanner:
-    def __init__(self, repo_root: str, manifest: ManifestConfig) -> None:
+    def __init__(
+        self,
+        repo_root: str,
+        manifest: ManifestConfig,
+        extra_patterns: list[PatternSpec] | None = None,
+        remove_patterns: list[str] | None = None,
+    ) -> None:
         self._root = Path(repo_root).resolve()
         self._manifest = manifest
-        # Always include devops patterns; include stack patterns based on manifest
-        self._patterns: list[PatternSpec] = [
-            p for p in ALL_PATTERNS if p["stack"] == "devops" or p["stack"] in manifest.stacks
+        remove_set: set[str] = set(remove_patterns or [])
+        base: list[PatternSpec] = [
+            p
+            for p in ALL_PATTERNS
+            if (p["stack"] == "devops" or p["stack"] in manifest.stacks)
+            and p["pattern"] not in remove_set
         ]
+        injected: list[PatternSpec] = [
+            p for p in (extra_patterns or []) if p["pattern"] not in remove_set
+        ]
+        self._patterns: list[PatternSpec] = base + injected
 
     def run(self) -> list[ScanResult]:
         results: list[ScanResult] = []
@@ -119,6 +135,9 @@ class Scanner:
                                 category=p["category"],
                                 stack=p["stack"],
                                 line=lineno,
+                                source=str(p.get("source", "default")),
+                                transitive=bool(p.get("transitive", False)),
+                                line_content=line,
                             )
                         )
         return matches

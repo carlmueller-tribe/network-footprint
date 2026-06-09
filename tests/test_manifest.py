@@ -74,3 +74,53 @@ def test_default_reference_is_not_shared(tmp_path: Path) -> None:
     from footprint.manifest import DEFAULT_STACKS as DS
 
     assert "mutated" not in DS, "load_manifest fallback must not share DEFAULT_STACKS reference"
+
+
+def test_load_manifest_with_import_overrides(tmp_path: Path) -> None:
+    yaml_content = """
+stacks:
+  - python
+overrides:
+  imports:
+    - package: pillow
+      imports_as: PIL
+    - package: opencv-python
+      imports_as: cv2
+"""
+    manifest_file = tmp_path / "network-footprint.yaml"
+    manifest_file.write_text(yaml_content)
+    config = load_manifest(tmp_path)
+    assert config.overrides is not None
+    overrides_map = {o.package: o.imports_as for o in config.overrides.imports}
+    assert overrides_map["pillow"] == "PIL"
+    assert overrides_map["opencv-python"] == "cv2"
+
+
+def test_load_manifest_with_pattern_overrides(tmp_path: Path) -> None:
+    yaml_content = r"""
+stacks:
+  - node
+overrides:
+  patterns:
+    add:
+      - pattern: 'myInternalClient\('
+        category: network_call
+        stack: node
+    remove:
+      - '\burl\('
+"""
+    manifest_file = tmp_path / "network-footprint.yaml"
+    manifest_file.write_text(yaml_content)
+    config = load_manifest(tmp_path)
+    assert config.overrides is not None
+    assert len(config.overrides.patterns.add) == 1
+    assert config.overrides.patterns.add[0]["pattern"] == r"myInternalClient\("
+    assert r"\burl\(" in config.overrides.patterns.remove
+
+
+def test_load_manifest_no_overrides(tmp_path: Path) -> None:
+    yaml_content = "stacks:\n  - python\n"
+    manifest_file = tmp_path / "network-footprint.yaml"
+    manifest_file.write_text(yaml_content)
+    config = load_manifest(tmp_path)
+    assert config.overrides is None
